@@ -1,2 +1,4 @@
 # doors-data-analysis
 data analysis code for the project: Investigating the influence of practice in stable contexts on learning transfer
+
+This repository contains data analysis code for learning, training and transfer stages of this experiment.
