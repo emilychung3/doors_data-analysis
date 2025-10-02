@@ -6,9 +6,6 @@ We are using this to find the moment at which participants grasp which doors are
 
 | file                    | notes                                                        |
 | ----------------------- | ------------------------------------------------------------ |
-| synthesised_data.csv    | Data that we synthesised to test our own implementation of the Maggi algorithm against theirs. |
-| maggi_py_results.csv    | Results produced by Maggi et al.'s Python implementation of their algorithm. We used the data in synthesised_data.csv. |
-| cf_maggi_py.R           | Our test implementation of Maggi's algorithm. We also create the synthesised data here. |
 | run_maggi.R             | A wrapper script to apply Maggi's algorithm to our doors task data. It calls format_data_for_maggi.R and get_maggi.R, applies a learning rule to the Maggi data to detect change points, then saves and plots the output. |
 | format_data_for_maggi.R | This function loads doors task data and tracks evidence for our "know-n" strategies. It includes variations that make the strategies independent or competitive, evaluate them on trials or a sliding window, and link "know-n" to specific doors or just the number of known doors. |
 | get_maggi.R             | This function takes evidence for each strategy, as a vector of ones and zeros, and generates a beta distribution from that evidence. The distribution updates for each new piece of evidence. We extract the parameters of that beta distribution at each evaluation point to get a timecourse of evidence for the strategy. |
