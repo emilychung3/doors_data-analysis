@@ -31,10 +31,10 @@ for (sub in subs) {
   train_type <- events %>% filter(sub==sid, ses==session) %>% pull(train_type)
   train_type <- train_type[1]
   
-  # get the trial numbers for each condition
+  # get the trial numbers in each condition, for stay trials only!!
   for (condition in conditions) {
     events_train <- events %>% 
-      filter(sub == sid, ses == session, context == condition)
+      filter(sub == sid, ses == session, context == condition, switch == 0)
     trials <- unique(events_train$t)
     ntrials <- length(trials)
     
