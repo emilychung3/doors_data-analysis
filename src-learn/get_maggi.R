@@ -1,3 +1,4 @@
+# K. Garner & E. Chung 2025
 get_maggi <- function(strategy,alpha=1,beta=1,decay=.9){ 
   # mode: (alphas-1) / (alphas+betas-2)
   # mean: alphas / (alphas+betas)
