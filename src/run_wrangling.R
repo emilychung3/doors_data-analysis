@@ -1,6 +1,6 @@
 # lydia barnes, march 2024 this script extracts, formats, and summarises data from the 'doors'
 # project.
-# updated by E. Chung
+# updated by E. Chung, 2025
 
 ### sources
 library(tidyverse)
@@ -10,8 +10,8 @@ source(file.path("src", "get_subs.R"))
 source(file.path("src", "get_switch.R"))
 source(file.path("src", "get_data.R"))
 source(file.path("src","get_setting_stability.R"))
-source(file.path("src","get_transition_probabilities.R"))
 source(file.path("src","get_learned_doors.R"))
+source(file.path("src","get_transfer_order.R"))
 
 ### settings
 
@@ -33,8 +33,8 @@ if (!dir.exists(file.path(project_path, "res"))) {
 
 # !you will need to change the data path to match the location of OneDrive on your personal
 # computer
-#data_path <- file.path("/Users/emilychung/Library/CloudStorage/OneDrive-SharedLibraries-UNSW/Learning and Attention Group - Emily PhD project - Emily PhD project/exp1_data", version)
-data_path <- file.path("C:/Users/echung/UNSW/Learning and Attention Group - Emily PhD project - exp1_data", version)
+data_path <- file.path("/Users/emilychung/Library/CloudStorage/OneDrive-SharedLibraries-UNSW/Learning and Attention Group - Emily PhD project - Emily PhD project/exp1_data", version)
+#data_path <- file.path("C:/Users/echung/UNSW/Learning and Attention Group - Emily PhD project - exp1_data", version)
 if (!dir.exists(data_path)) {
   stop(paste0(data_path, " does not exist"))
 }
@@ -48,7 +48,7 @@ subs <- get_subs(version)
 grp_data <- data.frame(
   sub = integer(), ses = integer(), subses = integer(), t = integer(), context = integer(), door = integer(),
   door_cc = integer(), door_oc = integer(), on = numeric(), off = numeric(), 
-  switch = integer(), train_type = integer(), transfer = integer(), full_transfer_first = integer(),
+  switch = integer(), train_type = integer(), transfer = integer(), order_id = integer(),
   original_house = integer()
 )
 
@@ -62,7 +62,7 @@ for (sub in subs) {
     train_type <- NA
     context_one_doors <- NA
     
-    if (exp=="exp_lt" && sub=="sub-64" && ses=="ses-learn"){
+    if (exp=="exp_lt" && sub=="sub-35" && ses=="ses-learn"){
      print("skipping missing data") 
     }else{
       
@@ -89,9 +89,15 @@ for (sub in subs) {
 door_lc <- get_learned_doors(grp_data)
 grp_data <- grp_data %>% add_column(door_lc, .after="door_oc")
 
-
+# get task-jumps
 grp_data <- get_setting_stability(grp_data) # track when they changed context into the correct or other context's door set
+
+# get never-relevant door selections
 grp_data <- grp_data %>% mutate(door_nc = case_when(door_cc==1 ~ 0, door_oc == 1 ~ 0, .default=1), .after="door_oc")
+
+# get transfer order
+grp_order_data <- get_transfer_order(grp_data)
+grp_data <- inner_join(grp_data, grp_order_data, by = 'sub') 
 
 # save the formatted data
 fnl <- file.path(project_path, "res", paste(paste(exp, "evt", sep = "_"), ".csv", sep = ""))
@@ -101,14 +107,11 @@ write_csv(grp_data, fnl)
 
 # by trial
 res <- grp_data %>%
-  group_by(sub, ses, t, context, train_type, transfer, order, original_house) %>%
+  group_by(sub, ses, t, context, train_type, transfer, order_id, original_house) %>%
   summarise(
     switch = max(switch), n_clicks = n(), n_cc = sum(door_cc), n_oc = sum(door_oc), n_lc = sum(door_lc), n_nc = sum(door_nc),
-    #setting_sticks = select_oc[1],
-    #setting_slips = max(select_oc_late),
     context_changes = sum(select_cc)+sum(select_oc),
     accuracy = n_cc / n_clicks,
-    #setting_errors = n_oc / n_clicks,
     general_errors = n_nc / n_clicks,
     learned_setting_errors = n_lc / n_clicks
 )
@@ -116,7 +119,6 @@ res <- grp_data %>%
 # re-label exp_lt test phase "switch" trials as stay trials
 res <- res %>% 
   mutate(switch = case_when(switch==1 & ses==3 ~ 0, .default = switch))
-
 
 # calculate context change rates  
 res$context_changes[intersect(which(res$switch==1),which(res$ses==2))] <- res$context_changes[intersect(which(res$switch==1),which(res$ses==2))]-1
