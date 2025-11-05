@@ -1,7 +1,7 @@
-format_data_for_maggi <- function(exp,nsub=1,nses=1,ncontext=1,method="by_trial",specific_doors=TRUE,competitive=FALSE,evaluate_all=FALSE){
+format_data_for_maggi <- function(exp,nsub=1,nses=1,ncontext=1,method="by_trial",specific_doors=TRUE,competitive=TRUE,evaluate_all=FALSE){
 
 # lydia barnes, may 2024
-# edited by E.Chung, september 2025
+# edited by E. Chung, september 2025
 # reads event data from doors task
 # re-codes accuracy so that "success" trials (<=4 clicks) that inc. context-irrelevant doors are counted as failures
 # classifies trials by whether they provide evidence for knowledge of each target door
@@ -9,8 +9,7 @@ format_data_for_maggi <- function(exp,nsub=1,nses=1,ncontext=1,method="by_trial"
 # sources
 
 # event data
-#events <- read.csv(file.path("res",paste(paste(exp,"evt", sep="_"), ".csv", sep=""))) # KG: events are read in on line 46 of run_maggi.R. Whats the reason for the replication?
-# aka, which one should you delete?
+#events <- read.csv(file.path("res",paste(paste(exp,"evt", sep="_"), ".csv", sep=""))) 
 events <- events %>% filter(sub==nsub, ses==nses) 
 if (nses < 3){
   
