@@ -165,11 +165,11 @@ get_data <- function(data_path, sub, ses, train_type, train_doors) {
 
       # record which order the transfer condition is completed during transfer test
       # and update "context" with new house numbers
-      change <- resps %>% 
-        mutate(change = c(diff(resps$transfer), 0))
-      last_row_per_cond = c(which(!change$change == 0), nrow(resps))
-      nrows_per_cond = c(last_row_per_cond[1], diff(last_row_per_cond))
-      n_orders = 3
+       change <- resps %>% 
+         mutate(change = c(diff(resps$transfer), 0))
+       last_row_per_cond = c(which(!change$change == 0), nrow(resps))
+       nrows_per_cond = c(last_row_per_cond[1], diff(last_row_per_cond))
+       n_orders = 3
       
       resps <- resps %>% 
         mutate(order = rep(1:n_orders, times = nrows_per_cond), # this variable gives the same thing as 'context' 
