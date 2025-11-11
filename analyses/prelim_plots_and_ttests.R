@@ -37,7 +37,7 @@ dv <- training_data$mean_task_jumps
 y_axis_lab <- 'Task-jumps'
 these_cols <- wes_palette("AsteroidCity3")[c(1, 4)]
 
-task_jumps_plt <- violin_and_boxplots(training_data)
+task_jumps_plt <- training_plots(training_data)
 task_jumps_plt
 
 ## plot general-error data
@@ -47,7 +47,7 @@ dv <- training_data$mean_gen_error
 y_axis_lab <- 'General Errors'
 these_cols <- wes_palette("AsteroidCity3")[c(1, 4)]
 
-general_errors_plt <- violin_and_boxplots(training_data)
+general_errors_plt <- training_plots(training_data)
 general_errors_plt
 
 # entropy ---------------------------------------------------------------------
@@ -55,7 +55,7 @@ entropy_data <- entropy_data %>%
   group_by(sid, train_type) %>% 
   summarise(mean_entropy = mean(entropy)) # get mean entropy for each participant
 entropy_data$train_type <- as.factor(entropy_data$train_type)
-levels(entropy_data$train_type) <- c("stable", "variable")
+levels(entropy_data$train_type) <- c("Stable", "Variable")
 
 # plot entropy data
 iv <- entropy_data$train_type
@@ -64,7 +64,7 @@ dv <- entropy_data$mean_entropy
 y_axis_lab <- 'Transition Entropy'
 these_cols <- wes_palette("AsteroidCity3")[c(1, 4)]
 
-entropy_plt <- violin_and_boxplots(entropy_data) # remove facet_wrap line for this
+entropy_plt <- training_plots(entropy_data) 
 entropy_plt
 
 # t-tests ---------------------------------------------------------------------
@@ -77,7 +77,7 @@ stay_trials <- training_data %>%
   filter(switch == 'stay')
 ttestBF(formula = mean_task_jumps ~ train_type, data = stay_trials)
 
-## stable vs. variable group on general-errors for swtich and stay trials separately
+## stable vs. variable group on general-errors for switch and stay trials separately
 ttestBF(formula = mean_gen_error ~ train_type, data = switch_trials)
 
 ttestBF(formula = mean_gen_error ~ train_type, data = stay_trials)
@@ -108,8 +108,10 @@ x_axis_lab <- 'Transfer type'
 dv <- transfer_data$mean_acc
 y_axis_lab <- 'Accuracy'
 these_cols <- wes_palette("AsteroidCity3")[c(1, 2, 4)]
+these_cols <- c("#cb6ce6", "#ff66c4", "#0097b2")
 
-accuracy_plt <- violin_and_boxplots(transfer_data)
+
+accuracy_plt <- transfer_plots(transfer_data)
 accuracy_plt
 
 # k4 data ----------------------------------------------------------------------
