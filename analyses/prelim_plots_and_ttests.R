@@ -8,8 +8,10 @@ library(BayesFactor)
 library(ggplot2)
 library(wesanderson)
 library(gghalves)
+library(showtext)
 
-source(file.path(getwd(), "analyses", "violin_and_boxplots.R"))
+source(file.path(getwd(), "analyses", "training_plots.R"))
+source(file.path(getwd(), "analyses", "transfer_plots.R"))
 source(file.path(getwd(), "analyses", "scatterplots.R"))
 
 exp_lt_data <- read.csv("res/exp_lt_trl.csv")
@@ -23,7 +25,7 @@ training_data <- exp_lt_data %>%
 training_data$train_type <- as.factor(training_data$train_type)
 levels(training_data$train_type) <- c("stable", "variable")
 training_data$switch <- as.factor(training_data$switch)
-levels(training_data$switch) <- c("stay", "switch")
+levels(training_data$switch) <- c("Stay", "Switch")
 
 training_data <- training_data %>% 
   group_by(sub, ses, train_type, switch) %>% 
@@ -70,11 +72,11 @@ entropy_plt
 # t-tests ---------------------------------------------------------------------
 ## stable vs. variable group on task-jumps for switch and stay trials separately
 switch_trials <- training_data %>% 
-  filter(switch == 'switch')
+  filter(switch == 'Switch')
 ttestBF(formula = mean_task_jumps ~ train_type, data = switch_trials)
 
 stay_trials <- training_data %>% 
-  filter(switch == 'stay')
+  filter(switch == 'Stay')
 ttestBF(formula = mean_task_jumps ~ train_type, data = stay_trials)
 
 ## stable vs. variable group on general-errors for switch and stay trials separately
@@ -92,9 +94,9 @@ ttestBF(formula = mean_entropy ~ train_type, data = entropy_data)
 transfer_data <- exp_lt_data %>% 
   filter(ses == 3)
 transfer_data$train_type <- as.factor(transfer_data$train_type) # renaming conditions and groups
-levels(transfer_data$train_type) <- c("stable", "variable")
+levels(transfer_data$train_type) <- c("Stable", "Variable")
 transfer_data$transfer <- as.factor(transfer_data$transfer)
-levels(transfer_data$transfer) <- c("novel", "partial", "complete")
+levels(transfer_data$transfer) <- c("Novel", "Partial", "Complete")
 
 transfer_data <- transfer_data %>% 
   group_by(sub, ses, train_type, transfer, order_id) %>% 
@@ -107,8 +109,8 @@ iv <- transfer_data$transfer
 x_axis_lab <- 'Transfer type'
 dv <- transfer_data$mean_acc
 y_axis_lab <- 'Accuracy'
-these_cols <- wes_palette("AsteroidCity3")[c(1, 2, 4)]
 these_cols <- c("#cb6ce6", "#ff66c4", "#0097b2")
+
 
 
 accuracy_plt <- transfer_plots(transfer_data)
@@ -117,37 +119,37 @@ accuracy_plt
 # k4 data ----------------------------------------------------------------------
 maggi_data <- maggi_data %>% filter(ses == 3, k4_onset != Inf)
 maggi_data$train_type <- as.factor(maggi_data$train_type)
-levels(maggi_data$train_type) <- c("stable", "variable")
+levels(maggi_data$train_type) <- c("Stable", "Variable")
 maggi_data$transfer <- as.factor(maggi_data$transfer)
-levels(maggi_data$transfer) <- c("novel", "partial", "complete")
+levels(maggi_data$transfer) <- c("Novel", "Partial", "Complete")
 
 ## plot k4 onset
 iv <- maggi_data$transfer
 x_axis_lab <- 'Transfer type'
 dv <- maggi_data$k4_onset
 y_axis_lab <- 'Learning Onset'
-these_cols <- wes_palette("AsteroidCity3")[c(1, 2, 4)]
+these_cols <- c("#cb6ce6", "#ff66c4", "#0097b2")
 
-k4_plt <- violin_and_boxplots(maggi_data)
+k4_plt <- transfer_plots(maggi_data)
 k4_plt
 
 # t-tests ---------------------------------------------------------------------
 ## accuracy and k4 onset: stable vs. variable on *partial* trf
-partial_trf <- transfer_data %>% filter(transfer == 'partial')
-partial_maggi <- maggi_data %>% filter(transfer == 'partial')
+partial_trf <- transfer_data %>% filter(transfer == 'Partial')
+partial_maggi <- maggi_data %>% filter(transfer == 'Partial')
 ttestBF(formula = mean_acc ~ train_type, data = partial_trf)
 ttestBF(formula = k4_onset ~ train_type, data = partial_maggi)
 
 
 ## accuracy and k4 onset: stable vs. variable on *novel* trf
-novel_trf <- transfer_data %>% filter(transfer == 'novel')
-novel_maggi <- maggi_data %>% filter (transfer == 'novel')
+novel_trf <- transfer_data %>% filter(transfer == 'Novel')
+novel_maggi <- maggi_data %>% filter (transfer == 'Novel')
 ttestBF(formula = mean_acc ~ train_type, data = novel_trf)
 ttestBF(formula = k4_onset ~ train_type, data = novel_maggi)
 
 ## accuracy and k4 onset: stable vs. variable on *complete* trf
-complete_trf <- transfer_data %>% filter(transfer == 'complete')
-complete_maggi <- maggi_data %>% filter(transfer == 'complete')
+complete_trf <- transfer_data %>% filter(transfer == 'Complete')
+complete_maggi <- maggi_data %>% filter(transfer == 'Complete')
 ttestBF(formula = mean_acc ~ train_type, data = complete_trf)
 ttestBF(formula = k4_onset ~ train_type, data = complete_maggi)
 
@@ -156,26 +158,47 @@ ttestBF(formula = k4_onset ~ train_type, data = complete_maggi)
 transfer_acc_wide <- transfer_data %>% 
   select(sub, ses, train_type, transfer, order_id, mean_acc) %>% 
   pivot_wider(names_from = transfer, values_from = mean_acc)
+ttestBF(x = transfer_acc_wide$Novel,  # accuracy: novel vs. partial 
+        y = transfer_acc_wide$Partial,
+        paired = TRUE)
+ttestBF(x = transfer_acc_wide$Complete, # accuracy: complete vs. partial
+        y = transfer_acc_wide$Partial,
+        paired = TRUE)
+ttestBF(x = transfer_acc_wide$Complete, # accuracy: complete vs. partial
+        y = transfer_acc_wide$Novel,
+        paired = TRUE)
+
+
 maggi_wide <- maggi_data %>% 
   select(sid, ses, train_type, transfer, k4_onset) %>% 
   pivot_wider(names_from = transfer, values_from = k4_onset) %>% # getting NA for some rows?
   na.omit()
+ttestBF(x = maggi_wide$Novel,  # accuracy: novel vs. partial 
+        y = maggi_wide$Partial,
+        paired = TRUE)
+ttestBF(x = maggi_wide$Complete, # accuracy: complete vs. partial
+        y = maggi_wide$Partial,
+        paired = TRUE)
+ttestBF(x = maggi_wide$Complete, # accuracy: complete vs. partial
+        y = maggi_wide$Novel,
+        paired = TRUE)
+
   
 ## stable group
 stable_transfer_acc <- transfer_acc_wide %>% 
-  filter(train_type == 'stable')
+  filter(train_type == 'Stable')
 stable_maggi <- maggi_wide %>% 
-  filter(train_type == 'stable') 
+  filter(train_type == 'Stable') 
 
 ## accuracy 
-ttestBF(x = stable_transfer_acc$novel,  # accuracy: novel vs. partial 
-        y = stable_transfer_acc$partial,
+ttestBF(x = stable_transfer_acc$Novel,  # accuracy: novel vs. partial 
+        y = stable_transfer_acc$Partial,
         paired = TRUE)
-ttestBF(x = stable_transfer_acc$complete, # accuracy: complete vs. partial
-        y = stable_transfer_acc$partial,
+ttestBF(x = stable_transfer_acc$Complete, # accuracy: complete vs. partial
+        y = stable_transfer_acc$Partial,
         paired = TRUE)
-ttestBF(x = stable_transfer_acc$complete, # accuracy: complete vs. novel
-        y = stable_transfer_acc$novel,
+ttestBF(x = stable_transfer_acc$Complete, # accuracy: complete vs. novel
+        y = stable_transfer_acc$Novel,
         paired = TRUE)
 
 ## learn onset
@@ -191,9 +214,9 @@ ttestBF(x = stable_maggi$complete, # accuracy: complete vs. novel
 
 ## variable group
 variable_transfer_acc <- transfer_acc_wide %>% 
-  filter(train_type == 'variable')
+  filter(train_type == 'Variable')
 variable_maggi <- maggi_wide %>% 
-  filter(train_type == 'variable')
+  filter(train_type == 'Variable')
 
 ## accuracy
 ttestBF(x = variable_transfer_acc$complete, # accuracy: complete vs. partial
@@ -238,6 +261,21 @@ y_axis_lab <- "Bias Scores"
 acc_entropy_plt <- scatterplot(transfer_acc_wide)
 acc_entropy_plt
 cor(transfer_acc_wide$bias, transfer_acc_wide$mean_entropy)
+
+# 
+transfer_by_taskset <- transfer_data %>% 
+  mutate(task_set = case_when(sub <= 24 ~ 'A',
+                              sub >= 24 & sub <= 48 ~ 'B',
+                              sub >= 49 & sub <= 72 ~ 'C',
+                              sub >= 73 ~ 'D'))
+iv <- transfer_by_taskset$transfer
+x_axis_lab <- 'Transfer type'
+dv <- transfer_by_taskset$mean_acc
+y_axis_lab <- 'Accuracy'
+these_cols <- c("#cb6ce6", "#ff66c4", "#0097b2")
+
+transfer_plots(transfer_by_taskset)
+
 
 
 
