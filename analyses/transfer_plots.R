@@ -8,7 +8,7 @@ transfer_plots <- function(data){
     geom_point(alpha = 0.5, size = 1.5,
                position = position_jitter(width = 0.2)) +
     geom_line(aes(group = sub), alpha = 0.5, colour = "grey") +
-    geom_boxplot(width = 0.15, alpha = 0.8, linewidth = 0.4, colour = 'grey20', fill = "grey",
+    geom_boxplot(width = 0.15, alpha = 0.8, linewidth = 0.4, colour = 'grey20',
                  outlier.shape = NA) +
     stat_summary(fun = mean, geom = "point", shape = 23, size = 2.5) +
     labs(x = x_axis_lab, y = y_axis_lab) +
