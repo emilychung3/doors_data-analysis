@@ -68,7 +68,7 @@ for (sub in subs) {
 }
 
 # writing the data into a csv file
-write.csv(data,file.path('res',paste(paste(exp,'entropy',sep='_'),'csv', sep='.')))
+write.csv(data,file.path('res',paste(paste(exp,'entropy',sep='_'),'csv', sep='.')), row.names = FALSE)
 
 
   

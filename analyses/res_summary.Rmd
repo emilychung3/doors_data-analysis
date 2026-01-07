@@ -1,0 +1,499 @@
+---
+title: "doors_plots_summary"
+output: html_document
+date: "2026-01-07"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+source("C:/github/doors_data-analysis/analyses/prelim_plots_and_ttests.R") 
+
+
+```
+
+# Document Summary
+
+This document contains the plots and analyses for all measures used to analyse performance in the doors experiment. Analyses are conducted for the training and transfer phase of the experiment separately.
+
+## Training Stage
+
+Three key measures are used to assess performance in the Training Stage:
+* Task jumps 
+* Transition entropy
+* General Errors
+
+### Task Jumps
+
+Task Jumps measure the extent to which training causes a mixing of door selections from Task A and B during pursuit of a single target. ‘Task jumps’ record the number of transitions between target locations from task-set A and B per trial. For example, a sequence of four door selections following the pattern of A1-B1-B2-A2 would incur a score of 2. This is due to the switch from task-set A to B on the second door selection, which is followed by a subsequent switch back to Task A on the fourth selection. Transitions to doors which are not relevant to any task are not recorded in this measure, however we do record irrelevant door selections to confirm whether they occur at a rate that is lower than would be expected by chance
+
+```{r task jumps, echo=FALSE}
+data <- training_data
+iv <- training_data$switch
+x_axis_lab <- 'Trial type'
+dv <- training_data$mean_task_jumps
+y_axis_lab <- 'Task Jumps'
+these_cols <- wes_palette("AsteroidCity3")[c(1, 4)]
+
+
+task_jumps <- ggplot(data = data, 
+                 mapping = aes(x = iv, y = dv, colour = iv, fill = iv)) +
+    geom_half_violin(side = "r", scale = "width", 
+                     width = 0.6,
+                     alpha = 0.3, linewidth = 0.3, 
+                     trim = FALSE) +
+    geom_half_point(side = "l", alpha = 0.5, size = 1.5,
+                    width = 0.6,
+                    position = position_jitter(width = 0.05)) +
+    geom_boxplot(width = 0.1, alpha = 0.9, linewidth = 0.3, colour = "grey20", 
+                 outlier.shape = NA) +
+    scale_y_continuous(limits = c(0, max(dv)), breaks = seq(0, 7.5, by = 1)) +
+    scale_fill_manual(values = these_cols) +
+    scale_colour_manual(values = these_cols) +
+    labs(x = x_axis_lab, y = y_axis_lab) + 
+    stat_summary(fun = mean, geom = "point", shape = 23, size = 2, 
+                colour = "grey20", fill = "grey20") +
+    facet_wrap(~train_type, 
+               labeller = labeller(train_type = c("stable" = "Stable",
+                                                  "variable" = "Variable"
+    ))) +
+    theme_classic(base_size = 16) +
+    theme(
+      legend.position = "none",
+      strip.background = element_rect(fill = "#f0e6da", colour = NA),
+      strip.text = element_text(face = "bold", size = 14),
+      axis.line.x = element_line(color = "grey20", linewidth = 0.5),
+      axis.line.y = element_line(color = "grey20", linewidth = 0.5),
+      axis.ticks = element_line(color = "grey20", linewidth = 0.5),
+      axis.text = element_text(color = "grey20", size = 14),
+      axis.title = element_text(face = 'bold', color = "grey20", size = 16),
+      axis.title.x = element_text(margin = margin(t = 10)),
+      axis.title.y = element_text(margin = margin(r = 10)) 
+    )
+    
+print(task_jumps)
+
+```
+
+We can also look at task jumps overtime.
+
+```{r task jumps by epoch}
+
+jumps_by_epoch <- ggplot(training_epochs, aes(x = epoch, y = group_task_jumps)) +
+  geom_point(alpha = 0.7) +
+  geom_line() +
+  facet_wrap(~ train_type) +
+  labs(x = "Epoch", y = "Task Jumps") +
+  theme_classic() 
+
+print(jumps_by_epoch)
+
+```
+
+### Transition Entropy
+
+Transition entropy quantifies the average variance in participants’ transitions between doors for a given task. First, for each door (or state, [s]) we compute the probability of a transition to the next door (or state, [s’]). We then compute the entropy over the vector of transition probabilities (s -> all s’) and then sum the entropies across all states (Σ(H(s)). This measure quantifies the degree to which a participants’ behaviour during training deviates from being perfectly predictable. Transition entropy during training is averaged across Task A and B. Higher routine variability scores indicate greater variability in search paths during the training stage, and less routine behaviour. 
+
+```{r transition entropy, echo = FALSE}
+data <- entropy_data
+iv <- entropy_data$train_type
+x_axis_lab <- 'Group'
+dv <- entropy_data$mean_entropy
+y_axis_lab <- 'Transition Entropy'
+these_cols <- wes_palette("AsteroidCity3")[c(1, 4)]
+
+
+entropy <- ggplot(data = data, 
+                 mapping = aes(x = iv, y = dv, colour = iv, fill = iv)) +
+    geom_half_violin(side = "r", scale = "width", 
+                     width = 0.6,
+                     alpha = 0.3, linewidth = 0.3, 
+                     trim = FALSE) +
+    geom_half_point(side = "l", alpha = 0.5, size = 1.5,
+                    width = 0.6,
+                    position = position_jitter(width = 0.05)) +
+    geom_boxplot(width = 0.1, alpha = 0.9, linewidth = 0.3, colour = "grey20", 
+                 outlier.shape = NA) +
+    scale_y_continuous(limits = c(0, max(dv)), breaks = seq(0, 40, by = 10)) +
+    scale_fill_manual(values = these_cols) +
+    scale_colour_manual(values = these_cols) +
+    labs(x = x_axis_lab, y = y_axis_lab) + 
+    stat_summary(fun = mean, geom = "point", shape = 23, size = 2, 
+                colour = "grey20", fill = "grey20") +
+    theme_classic(base_size = 16) +
+    theme(
+      legend.position = "none",
+      strip.background = element_rect(fill = "#f0e6da", colour = NA),
+      strip.text = element_text(face = "bold", size = 14),
+      axis.line.x = element_line(color = "grey20", linewidth = 0.5),
+      axis.line.y = element_line(color = "grey20", linewidth = 0.5),
+      axis.ticks = element_line(color = "grey20", linewidth = 0.5),
+      axis.text = element_text(color = "grey20", size = 14),
+      axis.title = element_text(face = 'bold', color = "grey20", size = 16),
+      axis.title.x = element_text(margin = margin(t = 10)),
+      axis.title.y = element_text(margin = margin(r = 10)) 
+    )
+    
+print(entropy)
+
+```
+
+
+### General errors
+
+A General Error is made when a door which belongs to neither Task A nor B is selected. General errors is used to determine the extent to which memory of target locations is disrupted by the frequency of switching between tasks during training and is represented as a proportion of the total number of door selections made. An average general error of p = 0.5 across trials in the training stage corresponds to chance level performance and thus indicates that a participant has failed to remember the target locations. 
+
+```{r general errors, echo = FALSE}
+data <- training_data
+iv <- training_data$switch
+x_axis_lab <- 'Trial type'
+dv <- training_data$mean_gen_error
+y_axis_lab <- 'General Errors'
+these_cols <- wes_palette("AsteroidCity3")[c(1, 4)]
+
+gen_errors <- ggplot(data = data, 
+                 mapping = aes(x = iv, y = dv, colour = iv, fill = iv)) +
+    geom_half_violin(side = "r", scale = "width", 
+                     width = 0.6,
+                     alpha = 0.3, linewidth = 0.3, 
+                     trim = FALSE) +
+    geom_half_point(side = "l", alpha = 0.5, size = 1.5,
+                    width = 0.6,
+                    position = position_jitter(width = 0.05)) +
+    geom_boxplot(width = 0.1, alpha = 0.9, linewidth = 0.3, colour = "grey20", 
+                 outlier.shape = NA) +
+    scale_y_continuous(limits = c(0, max(dv)), breaks = seq(0, 1, by = 0.1)) +
+    scale_fill_manual(values = these_cols) +
+    scale_colour_manual(values = these_cols) +
+    labs(x = x_axis_lab, y = y_axis_lab) + 
+    stat_summary(fun = mean, geom = "point", shape = 23, size = 2, 
+                colour = "grey20", fill = "grey20") +
+    facet_wrap(~train_type, 
+               labeller = labeller(train_type = c("stable" = "Stable",
+                                                  "variable" = "Variable"
+    ))) +
+    theme_classic(base_size = 16) +
+    theme(
+      legend.position = "none",
+      strip.background = element_rect(fill = "#f0e6da", colour = NA),
+      strip.text = element_text(face = "bold", size = 14),
+      axis.line.x = element_line(color = "grey20", linewidth = 0.5),
+      axis.line.y = element_line(color = "grey20", linewidth = 0.5),
+      axis.ticks = element_line(color = "grey20", linewidth = 0.5),
+      axis.text = element_text(color = "grey20", size = 14),
+      axis.title = element_text(face = 'bold', color = "grey20", size = 16),
+      axis.title.x = element_text(margin = margin(t = 10)),
+      axis.title.y = element_text(margin = margin(r = 10)) 
+    )
+    
+print(gen_errors)   
+
+```
+
+Participants who have a general error greater than 0.25 will be excluded from analyses of the test phase. The subject numbers for these participants are:
+
+```{r excluded subs, echo = FALSE}
+
+print(exclude_summary)
+
+```
+
+
+## Transfer Test Stage
+
+Three key measures are used to assess performance during the Transfer Test Stage of the experiment.
+* Accuracy
+* Learning Onset
+* Setting Error
+
+Subjects XX, XX and XX are excluded from all analyses of Transfer data because of poor training performance.
+
+
+### Accuracy
+
+Accuracy is a measure of performance in the transfer task. It is the proportion of door selections which are relevant to the current task, relative to the total number of door selections. Accuracy is averaged across trials for each participant. 
+
+```{r accuracy, echo = FALSE}
+data <- transfer_data
+iv <- transfer_data$transfer
+x_axis_lab <- 'Transfer type'
+dv <- transfer_data$mean_acc
+y_axis_lab <- 'Accuracy'
+these_cols <- c("#8da0cb", "#e78ac3", "#a6d854")
+
+jitter_pos <- position_jitterdodge(jitter.width = 0.01) 
+  
+accuracy <- ggplot(data = data, 
+                mapping = aes(x = iv, y = dv, colour = iv, fill = iv)) +
+  geom_point(aes(group = sub), 
+             alpha = 0.3, 
+             size = 1.5,
+             position = jitter_pos) +
+  geom_line(aes(group = sub), 
+            alpha = 0.3, 
+            colour = "grey",
+            position = jitter_pos) +
+  geom_boxplot(width = 0.2, 
+               alpha = 0.8, 
+               linewidth = 0.3, 
+               colour = 'grey20', 
+              outlier.shape = NA) +
+  stat_summary(fun = mean, geom = "point", shape = 23, size = 2, 
+               colour = "grey20", fill = "grey20") +
+  scale_y_continuous(limits = c(0.4, 1), breaks = seq(0.4, 1, by = 0.1)) +
+  labs(x = x_axis_lab, y = y_axis_lab) +
+  theme_classic(base_size = 16)+
+  scale_fill_manual(values = these_cols) +
+  scale_colour_manual(values = these_cols) +
+  facet_wrap(~train_type) +
+  theme(
+    legend.position = "none",
+    strip.background = element_rect(fill = "#f0e6da", colour = "NA"),
+    strip.text = element_text(face = "bold", size = 14),
+    axis.line.x = element_line(color = "grey20", linewidth = 0.5),
+    axis.line.y = element_line(color = "grey20", linewidth = 0.5),
+    axis.ticks = element_line(color = "grey20", linewidth = 0.5),
+    axis.text = element_text(color = "grey20", size = 14),
+    axis.title = element_text(face = "bold", color = "grey20", size = 16),
+    axis.title.x = element_text(margin = margin(t = 10)),
+    axis.title.y = element_text(margin = margin(r = 10)) 
+  )
+
+print(accuracy)
+
+```
+
+To remove mitigate any order effects, accuracy can be assess as a between subjects design, by comparing performance on the first transfer condition across groups. This however, significantly reduces power.
+
+```{r accuracy between subjects}
+data <- between_subs_data
+iv <- between_subs_data$transfer
+x_axis_lab <- 'Transfer type'
+dv <- between_subs_data$mean_acc
+y_axis_lab <- 'Accuracy'
+these_cols <- c("#8da0cb", "#e78ac3", "#a6d854")
+
+jitter_pos <- position_jitterdodge(jitter.width = 0.01) # can't change width?
+  
+acc_between_subs <- ggplot(data = data, 
+                mapping = aes(x = iv, y = dv, colour = iv, fill = iv)) +
+  geom_point(aes(group = sub),
+             alpha = 0.3, 
+             size = 1.5,
+             position = jitter_pos) +
+  geom_line(aes(group = sub), 
+            alpha = 0.3, 
+            colour = "grey",
+            position = jitter_pos) +
+  geom_boxplot(width = 0.2, 
+               alpha = 0.8, 
+               linewidth = 0.3, 
+               colour = 'grey20', 
+              outlier.shape = NA) +
+  stat_summary(fun = mean, geom = "point", shape = 23, size = 2, 
+               colour = "grey20", fill = "grey20") +
+  scale_y_continuous(limits = c(0.5, 1), breaks = seq(0.5, 1, by = 0.1)) +
+  labs(x = x_axis_lab, y = y_axis_lab) +
+  theme_classic(base_size = 16)+
+  scale_fill_manual(values = these_cols) +
+  scale_colour_manual(values = these_cols) +
+  facet_wrap(~train_type) +
+  theme(
+    legend.position = "none",
+    strip.background = element_rect(fill = "#f0e6da", colour = "NA"),
+    strip.text = element_text(face = "bold", size = 14),
+    axis.line.x = element_line(color = "grey20", linewidth = 0.5),
+    axis.line.y = element_line(color = "grey20", linewidth = 0.5),
+    axis.ticks = element_line(color = "grey20", linewidth = 0.5),
+    axis.text = element_text(color = "grey20", size = 14),
+    axis.title = element_text(face = "bold", color = "grey20", size = 16),
+    axis.title.x = element_text(margin = margin(t = 10)),
+    axis.title.y = element_text(margin = margin(r = 10)) 
+  )
+
+print(acc_between_subs)
+
+```
+
+
+
+### Learning Onset
+Learning onset quantifies how long it takes to learn the target locations by determining the trial at which there is evidence for knowledge of all four target locations in each task.  
+
+Learning onset is calculated using a Bayesian algorithm (Maggi et al., 2024) which applies the beta distribution to model the amount of evidence for a particular behavioural strategy on a trial-by-trial basis. To do this, every trial is assessed for whether it contains evidence for an informed (non-guessed) selection of each door. for every trial, any correct door selection which is made before an error is considered evidence for knowledge of a target location and is coded with a ‘1’. Door selections made after an error cannot be distinguished from guessing and are therefore coded with a ‘0’. Target locations which were never selected on the given trial are coded with ‘NA’. In a trial with a sequence of doors selections ‘A-B-X-Y-C' for example, doors A and B are coded with a ‘1’ while C and D are coded with ‘0’ and ‘NA’ respectively. 
+
+
+```{r learning onset, echo = FALSE}
+data <- maggi_data
+iv <- maggi_data$transfer
+x_axis_lab <- 'Transfer type'
+dv <- maggi_data$k4_onset
+y_axis_lab <- 'Learning Onset'
+these_cols <- c("#8da0cb", "#e78ac3", "#a6d854")
+
+
+jitter_pos <- position_jitterdodge(jitter.width = 0.01) # can't change width?
+  
+learning_onset <- ggplot(data = data, 
+                mapping = aes(x = iv, y = dv, colour = iv, fill = iv)) +
+  geom_point(aes(group = sid), # 'sub' for acc and 'sid' for maggi
+             alpha = 0.3, 
+             size = 1.5,
+             position = jitter_pos) +
+  geom_line(aes(group = sid), # as above
+            alpha = 0.3, 
+            colour = "grey",
+            position = jitter_pos) +
+  geom_boxplot(width = 0.2, 
+               alpha = 0.8, 
+               linewidth = 0.3, 
+               colour = 'grey20', 
+              outlier.shape = NA) +
+  stat_summary(fun = mean, geom = "point", shape = 23, size = 2, 
+               colour = "grey20", fill = "grey20") +
+  scale_y_continuous(limits = c(0, 40), breaks = seq(0, 40, by = 10)) +
+  labs(x = x_axis_lab, y = y_axis_lab) +
+  theme_classic(base_size = 16)+
+  scale_fill_manual(values = these_cols) +
+  scale_colour_manual(values = these_cols) +
+  facet_wrap(~train_type) +
+  theme(
+    legend.position = "none",
+    strip.background = element_rect(fill = "#f0e6da", colour = "NA"),
+    strip.text = element_text(face = "bold", size = 14),
+    axis.line.x = element_line(color = "grey20", linewidth = 0.5),
+    axis.line.y = element_line(color = "grey20", linewidth = 0.5),
+    axis.ticks = element_line(color = "grey20", linewidth = 0.5),
+    axis.text = element_text(color = "grey20", size = 14),
+    axis.title = element_text(face = "bold", color = "grey20", size = 16),
+    axis.title.x = element_text(margin = margin(t = 10)),
+    axis.title.y = element_text(margin = margin(r = 10)) 
+  )
+
+print(learning_onset)
+
+```
+
+Note: participants who never meet the criteria for learning onset are not included in the figure above. The number of subjects in each group who are considered 'non-learners' are outlined below.
+
+```{r non-learners}
+
+print(non_learners)
+
+```
+
+### Setting Errors
+Setting-error quantifies the extent to which participants apply previously learned target locations which are not relevant to the current task. Since the number of relevant doors differ between the transfer and novel conditions, setting-error for partial and complete transfer will be calculated differently to the novel task condition.  
+
+For partial and complete transfer, setting-error is calculated as the proportion of total door selections which were previously relevant to Task A or B but have not been transferred to the current task-setting. 
+
+For the novel task condition, setting-error will be calculated as the proportion of door selections from Task A and B. 
+
+```{r setting errors}
+data <- transfer_data
+iv <- transfer_data$transfer
+x_axis_lab <- 'Transfer type'
+dv <- transfer_data$mean_set_error
+y_axis_lab <- 'Setting Error'
+these_cols <- c("#8da0cb", "#e78ac3", "#a6d854")
+
+jitter_pos <- position_jitterdodge(jitter.width = 0.01) 
+  
+setting_error <- ggplot(data = data, 
+                mapping = aes(x = iv, y = dv, colour = iv, fill = iv)) +
+  geom_point(aes(group = sub), 
+             alpha = 0.3, 
+             size = 1.5,
+             position = jitter_pos) +
+  geom_line(aes(group = sub), 
+            alpha = 0.3, 
+            colour = "grey",
+            position = jitter_pos) +
+  geom_boxplot(width = 0.2, 
+               alpha = 0.8, 
+               linewidth = 0.3, 
+               colour = 'grey20', 
+              outlier.shape = NA) +
+  stat_summary(fun = mean, geom = "point", shape = 23, size = 2, 
+               colour = "grey20", fill = "grey20") +
+  scale_y_continuous(limits = c(0, 0.5), breaks = seq(0, 0.5, by = 0.1)) +
+  labs(x = x_axis_lab, y = y_axis_lab) +
+  theme_classic(base_size = 16)+
+  scale_fill_manual(values = these_cols) +
+  scale_colour_manual(values = these_cols) +
+  facet_wrap(~train_type) +
+  theme(
+    legend.position = "none",
+    strip.background = element_rect(fill = "#f0e6da", colour = "NA"),
+    strip.text = element_text(face = "bold", size = 14),
+    axis.line.x = element_line(color = "grey20", linewidth = 0.5),
+    axis.line.y = element_line(color = "grey20", linewidth = 0.5),
+    axis.ticks = element_line(color = "grey20", linewidth = 0.5),
+    axis.text = element_text(color = "grey20", size = 14),
+    axis.title = element_text(face = "bold", color = "grey20", size = 16),
+    axis.title.x = element_text(margin = margin(t = 10)),
+    axis.title.y = element_text(margin = margin(r = 10)) 
+  )
+
+print(setting_error)
+
+```
+
+
+## Additional Analyses
+
+### Transfer Accuracy by task-set
+
+We can also examine whether similarity in the two learned task-sets influences performance on each of the transfer conditions. It may be that when two task sets are more similar (i.e., when there is more overlap in two task-sets), participants are better able to perform partial transfer. The following plot provides an illustration of any differences between the four sets of Task A and B that were given to participants. However, more work would be needed to quantify how similar two task-sets are.
+
+```{r transfer by task-set}
+
+data <- transfer_by_taskset
+iv <- transfer_by_taskset$transfer
+x_axis_lab <- 'Transfer type'
+dv <- transfer_by_taskset$mean_acc
+y_axis_lab <- 'Accuracy'
+these_cols <- c("#8da0cb", "#e78ac3", "#a6d854")
+
+jitter_pos <- position_jitterdodge(jitter.width = 0.01) 
+  
+accuracy_by_taskset <- ggplot(data = data, 
+                mapping = aes(x = iv, y = dv, colour = iv, fill = iv)) +
+  geom_point(aes(group = sub), 
+             alpha = 0.3, 
+             size = 1.5,
+             position = jitter_pos) +
+  geom_line(aes(group = sub), 
+            alpha = 0.3, 
+            colour = "grey",
+            position = jitter_pos) +
+  geom_boxplot(width = 0.2, 
+               alpha = 0.8, 
+               linewidth = 0.3, 
+               colour = 'grey20', 
+              outlier.shape = NA) +
+  stat_summary(fun = mean, geom = "point", shape = 23, size = 2, 
+               colour = "grey20", fill = "grey20") +
+  scale_y_continuous(limits = c(0.4, 1), breaks = seq(0.4, 1, by = 0.1)) +
+  labs(x = x_axis_lab, y = y_axis_lab) +
+  theme_classic(base_size = 16)+
+  scale_fill_manual(values = these_cols) +
+  scale_colour_manual(values = these_cols) +
+  facet_wrap(~task_set) +
+  theme(
+    legend.position = "none",
+    strip.background = element_rect(fill = "#f0e6da", colour = "NA"),
+    strip.text = element_text(face = "bold", size = 14),
+    axis.line.x = element_line(color = "grey20", linewidth = 0.5),
+    axis.line.y = element_line(color = "grey20", linewidth = 0.5),
+    axis.ticks = element_line(color = "grey20", linewidth = 0.5),
+    axis.text = element_text(color = "grey20", size = 14),
+    axis.title = element_text(face = "bold", color = "grey20", size = 16),
+    axis.title.x = element_text(margin = margin(t = 10)),
+    axis.title.y = element_text(margin = margin(r = 10)) 
+  )
+
+print(accuracy_by_taskset)
+
+
+```

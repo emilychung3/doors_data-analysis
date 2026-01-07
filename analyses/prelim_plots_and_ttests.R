@@ -8,7 +8,6 @@ library(BayesFactor)
 library(ggplot2)
 library(wesanderson)
 library(gghalves)
-library(showtext)
 
 source(file.path(getwd(), "analyses", "training_plots.R"))
 source(file.path(getwd(), "analyses", "transfer_plots.R"))
@@ -27,7 +26,17 @@ levels(training_data$train_type) <- c("stable", "variable")
 training_data$switch <- as.factor(training_data$switch)
 levels(training_data$switch) <- c("Stay", "Switch")
 
-training_data <- training_data %>% 
+training_by_epoch <- training_data %>%  # for later when looking at task jumps overtime
+  mutate(epoch = case_when(t < 40 ~ 1, 
+                           t >= 40 & t < 80 ~ 2,
+                           t >= 80 & t < 120 ~ 3,
+                           t >= 120 & t < 160 ~ 4,
+                           t >= 160 & t < 200 ~ 5,
+                           t >= 200 & t < 240 ~ 6,
+                           t >= 240 & t < 280 ~ 7,
+                           t >= 280 ~ 8))
+
+training_data <- training_data %>%  # for making group comparisons
   group_by(sub, ses, train_type, switch) %>% 
   summarise(mean_task_jumps  = mean(context_changes),
             mean_gen_error = mean(general_errors)) 
@@ -98,7 +107,12 @@ levels(transfer_data$train_type) <- c("Stable", "Variable")
 transfer_data$transfer <- as.factor(transfer_data$transfer)
 levels(transfer_data$transfer) <- c("Novel", "Partial", "Complete")
 
+exclude_summary <- training_data %>% 
+  filter(mean_gen_error > 0.25)
+exclude_subs <- exclude_summary %>% pull(sub)
+
 transfer_data <- transfer_data %>% 
+  filter(!sub %in% exclude_subs) %>% # removing people with gen-error > 0.25 during training
   group_by(sub, ses, train_type, transfer, order_id) %>% 
   slice_head(n = 20) %>%
   summarise(mean_acc  = mean(accuracy),
@@ -109,26 +123,30 @@ iv <- transfer_data$transfer
 x_axis_lab <- 'Transfer type'
 dv <- transfer_data$mean_acc
 y_axis_lab <- 'Accuracy'
-these_cols <- c("#cb6ce6", "#ff66c4", "#0097b2")
-
-
+these_cols <- c("#8da0cb", "#e78ac3", "#a6d854")
 
 accuracy_plt <- transfer_plots(transfer_data)
 accuracy_plt
 
 # k4 data ----------------------------------------------------------------------
+non_learners <- maggi_data %>% filter(ses == 3, k4_onset == Inf)
+
 maggi_data <- maggi_data %>% filter(ses == 3, k4_onset != Inf)
 maggi_data$train_type <- as.factor(maggi_data$train_type)
 levels(maggi_data$train_type) <- c("Stable", "Variable")
 maggi_data$transfer <- as.factor(maggi_data$transfer)
 levels(maggi_data$transfer) <- c("Novel", "Partial", "Complete")
 
+maggi_data <- maggi_data %>% 
+  filter(!sid %in% exclude_subs) # removing people with gen-error > 0.25 during training
+
+
 ## plot k4 onset
 iv <- maggi_data$transfer
 x_axis_lab <- 'Transfer type'
 dv <- maggi_data$k4_onset
 y_axis_lab <- 'Learning Onset'
-these_cols <- c("#cb6ce6", "#ff66c4", "#0097b2")
+these_cols <- c("#8da0cb", "#e78ac3", "#a6d854")
 
 k4_plt <- transfer_plots(maggi_data)
 k4_plt
@@ -202,14 +220,14 @@ ttestBF(x = stable_transfer_acc$Complete, # accuracy: complete vs. novel
         paired = TRUE)
 
 ## learn onset
-ttestBF(x = stable_maggi$novel, # k4_onset: novel vs. partial
-        y = stable_maggi$partial,
+ttestBF(x = stable_maggi$Novel, # k4_onset: novel vs. partial
+        y = stable_maggi$Partial,
         paired = TRUE)
-ttestBF(x = stable_maggi$complete, # accuracy: complete vs. partial
-        y = stable_maggi$partial,
+ttestBF(x = stable_maggi$Complete, # accuracy: complete vs. partial
+        y = stable_maggi$Partial,
         paired = TRUE)
-ttestBF(x = stable_maggi$complete, # accuracy: complete vs. novel
-        y = stable_maggi$novel,
+ttestBF(x = stable_maggi$Complete, # accuracy: complete vs. novel
+        y = stable_maggi$Novel,
         paired = TRUE)
 
 ## variable group
@@ -219,50 +237,50 @@ variable_maggi <- maggi_wide %>%
   filter(train_type == 'Variable')
 
 ## accuracy
-ttestBF(x = variable_transfer_acc$complete, # accuracy: complete vs. partial
-        y = variable_transfer_acc$partial,
+ttestBF(x = variable_transfer_acc$Complete, # accuracy: complete vs. partial
+        y = variable_transfer_acc$Partial,
         paired = TRUE)
-ttestBF(x = variable_transfer_acc$complete, # accuracy: complete vs. novel
-        y = variable_transfer_acc$novel,
+ttestBF(x = variable_transfer_acc$Complete, # accuracy: complete vs. novel
+        y = variable_transfer_acc$Novel,
         paired = TRUE)
-ttestBF(x = variable_transfer_acc$novel, # accuracy: novel vs. partial
-        y = variable_transfer_acc$partial,
+ttestBF(x = variable_transfer_acc$Novel, # accuracy: novel vs. partial
+        y = variable_transfer_acc$Partial,
         paired = TRUE)
 
 ## k4 onset
-ttestBF(x = variable_maggi$novel, # k4_onset: novel vs. partial
-        y = variable_maggi$partial,
+ttestBF(x = variable_maggi$Novel, # k4_onset: novel vs. partial
+        y = variable_maggi$Partial,
         paired = TRUE)
-ttestBF(x = variable_maggi$novel, # k4_onset: novel vs. complete
-        y = variable_maggi$complete,
+ttestBF(x = variable_maggi$Novel, # k4_onset: novel vs. complete
+        y = variable_maggi$Complete,
         paired = TRUE)
-ttestBF(x = variable_maggi$partial, # k4_onset: partial vs. complete
-        y = variable_maggi$complete,
+ttestBF(x = variable_maggi$Partial, # k4_onset: partial vs. complete
+        y = variable_maggi$Complete,
         paired = TRUE)
 
 
 
 # correlating entropy with a bias score for performance on complete vs. partial 
 # transfer
-transfer_acc_wide <- transfer_acc_wide %>% 
-  mutate(bias = (complete - partial)/(complete+partial))
-entropy_data_to_join <- entropy_data %>% 
-  select(sid, mean_entropy) %>% 
-  rename('sub' = 'sid')
-
-transfer_acc_wide <- inner_join(transfer_acc_wide, entropy_data_to_join, 
-                                by = 'sub')
-
-iv <- transfer_acc_wide$mean_entropy
-x_axis_lab <- "Transition Entropy"
-dv <- transfer_acc_wide$bias
-y_axis_lab <- "Bias Scores"
-
-acc_entropy_plt <- scatterplot(transfer_acc_wide)
-acc_entropy_plt
-cor(transfer_acc_wide$bias, transfer_acc_wide$mean_entropy)
-
+# transfer_acc_wide <- transfer_acc_wide %>% 
+#   mutate(bias = (complete - partial)/(complete+partial))
+# entropy_data_to_join <- entropy_data %>% 
+#   select(sid, mean_entropy) %>% 
+#   rename('sub' = 'sid')
 # 
+# transfer_acc_wide <- inner_join(transfer_acc_wide, entropy_data_to_join, 
+#                                 by = 'sub')
+# 
+# iv <- transfer_acc_wide$mean_entropy
+# x_axis_lab <- "Transition Entropy"
+# dv <- transfer_acc_wide$bias
+# y_axis_lab <- "Bias Scores"
+# 
+# acc_entropy_plt <- scatterplot(transfer_acc_wide)
+# acc_entropy_plt
+# cor(transfer_acc_wide$bias, transfer_acc_wide$mean_entropy)
+
+# transfer performance by different learning task sets
 transfer_by_taskset <- transfer_data %>% 
   mutate(task_set = case_when(sub <= 24 ~ 'A',
                               sub >= 24 & sub <= 48 ~ 'B',
@@ -272,10 +290,49 @@ iv <- transfer_by_taskset$transfer
 x_axis_lab <- 'Transfer type'
 dv <- transfer_by_taskset$mean_acc
 y_axis_lab <- 'Accuracy'
-these_cols <- c("#cb6ce6", "#ff66c4", "#0097b2")
+these_cols <- c("#8da0cb", "#e78ac3", "#a6d854")
 
 transfer_plots(transfer_by_taskset)
 
+## looking at task jumps over time
+training_epochs <- training_by_epoch %>% 
+  group_by(sub, ses, train_type, epoch) %>% # for looking at task jumps overtime
+  summarise(mean_task_jumps  = mean(context_changes),
+            mean_gen_error = mean(general_errors)) 
+
+training_epochs <- training_epochs %>%
+  group_by(train_type, epoch) %>% # for looking at task jumps overtime
+  summarise(group_task_jumps  = mean(mean_task_jumps),
+            group_gen_error = mean(mean_gen_error)) 
+
+jumps_by_epoch <- ggplot(training_epochs, aes(x = epoch, y = group_task_jumps)) +
+  geom_point(alpha = 0.7) +
+  geom_line() +
+  facet_wrap(~ train_type) +
+  theme_classic()
+
+## getting between subjects data
+between_subs_data <- exp_lt_data %>% 
+  filter(ses == 3, context == 1)
+between_subs_data$train_type <- as.factor(between_subs_data$train_type) # renaming conditions and groups
+levels(between_subs_data$train_type) <- c("Stable", "Variable")
+between_subs_data$transfer <- as.factor(between_subs_data$transfer)
+levels(between_subs_data$transfer) <- c("Novel", "Partial", "Complete")
+
+between_subs_data <- between_subs_data %>% 
+  filter(!sub %in% exclude_subs) %>% # removing people with gen-error > 0.25 during training
+  group_by(sub, ses, train_type, transfer, order_id) %>% 
+  slice_head(n = 20) %>%
+  summarise(mean_acc  = mean(accuracy),
+            mean_set_error = mean(learned_setting_errors)) 
 
 
+iv <- between_subs_data$transfer
+x_axis_lab <- 'Transfer type'
+dv <- between_subs_data$mean_acc
+y_axis_lab <- 'Accuracy'
+these_cols <- c("#8da0cb", "#e78ac3", "#a6d854")
+
+accuracy_plt <- transfer_plots(between_subs_data)
+accuracy_plt
 
