@@ -9,33 +9,13 @@ source(file.path(getwd(), "src-learn", "get_maggi.R"))
 #source(file.path(getwd(), "src-learn", "format_data_for_maggi.R"))
 source(file.path(getwd(), "src-learn", "format_data_for_maggi_revised.R"))
 source(file.path(getwd(), "src", "get_subs.R"))
-# 
-# set.seed(17)
-# simulation <- FALSE
-# 
-# if (simulation){ #if False, 
-#   # synthesise data
-#   ps <- c(.1, .3, .6, .9) #reasonable steps in the probability of successes over runs of trials
-#   n <- 25 #trials per run
-#   data <- unlist(lapply(ps, rbinom, n=n, size=1)) # n * length(ps) trials drawn from a binomial distribution
-#   c(alphas,betas,beta_map,beta_variance) %<-% get_maggi(data)
-#   
-#   # view the final beta distribution
-#   increments <- seq(0,1,by=.01)
-#   plot(increments,dbeta(increments,alphas[length(data)],betas[length(data)]),type="l",col="darkgreen") 
-#   
-# }else{
-  # read real data
-  
+
   project_path <- getwd()
   
   # settings ----------------------------------------------------------------
   version <- "data_sandpit"
   exp <- "exp_lt" # 'exp_lt' (learning transfer)
   sess <- c(1,3) # session: 1 = 'ses-learn', 3 = 'ses-test'.
-  colours <- c("darkgreen","limegreen","gold","orange")
-  # save_plots <- FALSE
-  # specific_doors = FALSE
   
   subs <- get_subs(version)
   events <- read.csv(file.path('res',paste(paste(exp, "evt", sep='_'), ".csv", sep=''))) 
@@ -79,13 +59,6 @@ source(file.path(getwd(), "src", "get_subs.R"))
           # count data (i.e., evidence) ----------------------------------------------------------------
           strategies <- format_data_for_maggi_revised(exp,nsub=sid,nses=ses,ncontext=condition,method="by_trial")
           
-          # empty figure ------------------------------------------------------------
-          # if (save_plots){
-          #   fnl <- file.path(project_path,'fig',paste(paste(exp, subject, session_names[ses], condition_names[condition], "maggi", sep = "_"), ".png", sep = ""))
-          #   png(file = fnl)
-          #   plot(1:nrow(strategies),rep(0,1,nrow(strategies)),type="l",col="black",ylim=c(0,1))
-          # }
-          
           # maggi -------------------------------------------------------------------
           i <- 0 
           beta_maps <- matrix(NA,4,nrow(strategies)) 
@@ -98,17 +71,7 @@ source(file.path(getwd(), "src", "get_subs.R"))
             
             # store data
             beta_maps[i,1:ncol(beta_maps)] <- beta_map 
-            
-            # if (save_plots){
-            #   # view alphas and betas over time
-            #   points(1:length(strategy),beta_map,type="l",col=colours[i])
-            # }
-            
           }
-          
-          # if (save_plots){
-          #   dev.off()
-          # }
           
           # format the data
           data <- data.frame(sub = integer(), ses = integer(), context = integer(), 
@@ -118,7 +81,7 @@ source(file.path(getwd(), "src", "get_subs.R"))
           
           # creates win variable which records the winning strategy for that event
           # also records when k4 is the winning strategy for the remaining trial i.e., when learning onset occurs
-            #else {
+            
               for (event in 1:length(beta_map)){ # for each trial
               win <- max(which(beta_maps[1:nrow(beta_maps),event] == max(beta_maps[1:nrow(beta_maps),event]))) #index the winning strategy (strategy with most evidence) for that event
               if (sum(beta_maps[1:nrow(beta_maps),event])==0){win <- NA} #if there is no evidence for any winning strategy, make win = NA
@@ -130,13 +93,13 @@ source(file.path(getwd(), "src", "get_subs.R"))
             data <- data %>% 
               mutate(stable_k4 = case_when(event < last_strategy_change ~ 0, # stable k4 = 0 for trials before last strategy change and 1 for trials after last strategy change and when winning strategy is k4 (know 4 doors)
                                            event %in% intersect(which(event >= last_strategy_change), which(win == 4)) ~ 1, .default = NA))
-            #}
+            
           group_data <- rbind(group_data,data)
         }
       }
     }
   }
-#}
+
   
   # threshold ---------------------------------------------------------------
 results <- group_data %>% group_by(sid,ses,context,train_type,transfer) %>% 
@@ -145,8 +108,8 @@ results <- group_data %>% group_by(sid,ses,context,train_type,transfer) %>%
             k4_onset = min(which(stable_k4 == 1)))
 
 
-write.csv(group_data,file.path('res',paste(paste(exp,'maggi-map',sep='_'),'csv', sep='.')))
-write.csv(results,file.path('res',paste(paste(exp,'maggi-k4',sep='_'),'csv', sep='.')))
+write.csv(group_data,file.path('res',paste(paste(exp,'maggi-map',sep='_'),'csv', sep='.')), row.names = FALSE)
+write.csv(results,file.path('res',paste(paste(exp,'maggi-k4',sep='_'),'csv', sep='.')), row.names = FALSE)
 
 
 

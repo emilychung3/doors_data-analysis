@@ -32,9 +32,11 @@ if (!dir.exists(file.path(project_path, "res"))) {
 }
 
 # !you will need to change the data path to match the location of OneDrive on your personal
-# computer
-data_path <- file.path("/Users/emilychung/Library/CloudStorage/OneDrive-SharedLibraries-UNSW/Learning and Attention Group - Emily PhD project - Emily PhD project/exp1_data", version)
-#data_path <- file.path("C:/Users/echung/UNSW/Learning and Attention Group - Emily PhD project - exp1_data", version)
+# mac
+#data_path <- file.path("/Users/emilychung/Library/CloudStorage/OneDrive-SharedLibraries-UNSW/Learning and Attention Group - Emily PhD project - Emily PhD project/exp1_data", version)
+# windows
+data_path <- file.path("C:/Users/echung/UNSW/Learning and Attention Group - Emily PhD project - exp1_data", version)
+
 if (!dir.exists(data_path)) {
   stop(paste0(data_path, " does not exist"))
 }
