@@ -14,6 +14,8 @@ all_orders <- data.frame(order_id  = order_id,
                      third = transfer_orders[, 3]
                      )
 
+write.csv(all_orders, file = "src/transfer_orders.csv")
+
 # now get the transfer orders for each participant and assign them with an order ID
 grp_order_data <- data.frame(sub = integer(), first = integer(), second = integer(), third = integer(), order = integer())
 
