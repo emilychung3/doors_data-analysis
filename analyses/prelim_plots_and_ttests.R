@@ -1,6 +1,6 @@
 # E. Chung, 2025
-# This script contains code for the and statistical analyses of the first XX 
-# data sets using Bayesian t-tests. Data is also plotted in violin and boxplots
+# This script contains code for the preliminary statistical analyses of the
+# data using Bayesian t-tests. Data is also plotted in violin and boxplots
 
 library(tidyverse)
 library(dplyr)
@@ -42,24 +42,24 @@ training_data <- training_data %>%  # for making group comparisons
             mean_gen_error = mean(general_errors)) 
 
 ## plot task-jumps data
-iv <- training_data$switch
-x_axis_lab <- 'Trial type'
-dv <- training_data$mean_task_jumps
-y_axis_lab <- 'Task-jumps'
-these_cols <- wes_palette("AsteroidCity3")[c(1, 4)]
-
-task_jumps_plt <- training_plots(training_data)
-task_jumps_plt
+# iv <- training_data$switch
+# x_axis_lab <- 'Trial type'
+# dv <- training_data$mean_task_jumps
+# y_axis_lab <- 'Task-jumps'
+# these_cols <- wes_palette("AsteroidCity3")[c(1, 4)]
+# 
+# task_jumps_plt <- training_plots(training_data)
+# task_jumps_plt
 
 ## plot general-error data
-iv <- training_data$switch
-x_axis_lab <- 'Trial type'
-dv <- training_data$mean_gen_error
-y_axis_lab <- 'General Errors'
-these_cols <- wes_palette("AsteroidCity3")[c(1, 4)]
-
-general_errors_plt <- training_plots(training_data)
-general_errors_plt
+# iv <- training_data$switch
+# x_axis_lab <- 'Trial type'
+# dv <- training_data$mean_gen_error
+# y_axis_lab <- 'General Errors'
+# these_cols <- wes_palette("AsteroidCity3")[c(1, 4)]
+# 
+# general_errors_plt <- training_plots(training_data)
+# general_errors_plt
 
 # entropy ---------------------------------------------------------------------
 entropy_data <- entropy_data %>% 
@@ -69,14 +69,14 @@ entropy_data$train_type <- as.factor(entropy_data$train_type)
 levels(entropy_data$train_type) <- c("Stable", "Variable")
 
 # plot entropy data
-iv <- entropy_data$train_type
-x_axis_lab <- 'Group'
-dv <- entropy_data$mean_entropy
-y_axis_lab <- 'Transition Entropy'
-these_cols <- wes_palette("AsteroidCity3")[c(1, 4)]
-
-entropy_plt <- training_plots(entropy_data) 
-entropy_plt
+# iv <- entropy_data$train_type
+# x_axis_lab <- 'Group'
+# dv <- entropy_data$mean_entropy
+# y_axis_lab <- 'Transition Entropy'
+# these_cols <- wes_palette("AsteroidCity3")[c(1, 4)]
+# 
+# entropy_plt <- training_plots(entropy_data) 
+# entropy_plt
 
 # t-tests ---------------------------------------------------------------------
 ## stable vs. variable group on task-jumps for switch and stay trials separately
@@ -114,24 +114,24 @@ exclude_subs <- exclude_summary %>% pull(sub)
 transfer_data <- transfer_data %>% 
   filter(!sub %in% exclude_subs) %>% # removing people with gen-error > 0.25 during training
   group_by(sub, ses, train_type, transfer, order_id) %>% 
-  slice_head(n = 20) %>%
+  #slice_head(n = 20) %>%
   summarise(mean_acc  = mean(accuracy),
             mean_set_error = mean(learned_setting_errors)) 
 
 ## plot accuracy data
-iv <- transfer_data$transfer
-x_axis_lab <- 'Transfer type'
-dv <- transfer_data$mean_acc
-y_axis_lab <- 'Accuracy'
-these_cols <- c("#8da0cb", "#e78ac3", "#a6d854")
-
-accuracy_plt <- transfer_plots(transfer_data)
-accuracy_plt
+# iv <- transfer_data$transfer
+# x_axis_lab <- 'Transfer type'
+# dv <- transfer_data$mean_acc
+# y_axis_lab <- 'Accuracy'
+# these_cols <- c("#8da0cb", "#e78ac3", "#a6d854")
+# 
+# accuracy_plt <- transfer_plots(transfer_data)
+# accuracy_plt
 
 # k4 data ----------------------------------------------------------------------
 non_learners <- maggi_data %>% filter(ses == 3, k4_onset == Inf)
 
-maggi_data <- maggi_data %>% filter(ses == 3, k4_onset != Inf)
+maggi_data <- maggi_data %>% filter(ses == 3) #,k4_onset != Inf)
 maggi_data$train_type <- as.factor(maggi_data$train_type)
 levels(maggi_data$train_type) <- c("Stable", "Variable")
 maggi_data$transfer <- as.factor(maggi_data$transfer)
@@ -142,14 +142,14 @@ maggi_data <- maggi_data %>%
 
 
 ## plot k4 onset
-iv <- maggi_data$transfer
-x_axis_lab <- 'Transfer type'
-dv <- maggi_data$k4_onset
-y_axis_lab <- 'Learning Onset'
-these_cols <- c("#8da0cb", "#e78ac3", "#a6d854")
-
-k4_plt <- transfer_plots(maggi_data)
-k4_plt
+# iv <- maggi_data$transfer
+# x_axis_lab <- 'Transfer type'
+# dv <- maggi_data$k4_onset
+# y_axis_lab <- 'Learning Onset'
+# these_cols <- c("#8da0cb", "#e78ac3", "#a6d854")
+# 
+# k4_plt <- transfer_plots(maggi_data)
+# k4_plt
 
 # t-tests ---------------------------------------------------------------------
 ## accuracy and k4 onset: stable vs. variable on *partial* trf
@@ -286,13 +286,13 @@ transfer_by_taskset <- transfer_data %>%
                               sub >= 24 & sub <= 48 ~ 'B',
                               sub >= 49 & sub <= 72 ~ 'C',
                               sub >= 73 ~ 'D'))
-iv <- transfer_by_taskset$transfer
-x_axis_lab <- 'Transfer type'
-dv <- transfer_by_taskset$mean_acc
-y_axis_lab <- 'Accuracy'
-these_cols <- c("#8da0cb", "#e78ac3", "#a6d854")
+# iv <- transfer_by_taskset$transfer
+# x_axis_lab <- 'Transfer type'
+# dv <- transfer_by_taskset$mean_acc
+# y_axis_lab <- 'Accuracy'
+# these_cols <- c("#8da0cb", "#e78ac3", "#a6d854")
 
-transfer_plots(transfer_by_taskset)
+# transfer_plots(transfer_by_taskset)
 
 ## looking at task jumps over time
 training_epochs <- training_by_epoch %>% 
@@ -305,11 +305,11 @@ training_epochs <- training_epochs %>%
   summarise(group_task_jumps  = mean(mean_task_jumps),
             group_gen_error = mean(mean_gen_error)) 
 
-jumps_by_epoch <- ggplot(training_epochs, aes(x = epoch, y = group_task_jumps)) +
-  geom_point(alpha = 0.7) +
-  geom_line() +
-  facet_wrap(~ train_type) +
-  theme_classic()
+# jumps_by_epoch <- ggplot(training_epochs, aes(x = epoch, y = group_task_jumps)) +
+#   geom_point(alpha = 0.7) +
+#   geom_line() +
+#   facet_wrap(~ train_type) +
+#   theme_classic()
 
 ## getting between subjects data
 between_subs_data <- exp_lt_data %>% 
@@ -327,12 +327,27 @@ between_subs_data <- between_subs_data %>%
             mean_set_error = mean(learned_setting_errors)) 
 
 
-iv <- between_subs_data$transfer
-x_axis_lab <- 'Transfer type'
-dv <- between_subs_data$mean_acc
-y_axis_lab <- 'Accuracy'
-these_cols <- c("#8da0cb", "#e78ac3", "#a6d854")
+# iv <- between_subs_data$transfer
+# x_axis_lab <- 'Transfer type'
+# dv <- between_subs_data$mean_acc
+# y_axis_lab <- 'Accuracy'
+# these_cols <- c("#8da0cb", "#e78ac3", "#a6d854")
+# 
+# accuracy_plt <- transfer_plots(between_subs_data)
+# accuracy_plt
 
-accuracy_plt <- transfer_plots(between_subs_data)
-accuracy_plt
+# joining transfer_data and maggi_data frames
+maggi_data <- maggi_data %>% 
+  rename("sub" = "sid") %>% 
+  select(-context, -train_type, -ses)
 
+joined_trf_data <- inner_join(transfer_data, maggi_data, by = c("sub", "transfer")) %>% 
+  filter(k4_onset != Inf)
+
+# getting correlation between acc and learning onset
+cor(joined_trf_data$mean_acc, joined_trf_data$k4_onset)
+
+# scatter plot
+plot(joined_trf_data$mean_acc, joined_trf_data$k4_onset)
+
+abline(lm(joined_trf_data$k4_onset ~ joined_trf_data$mean_acc), col = "red", lwd = 2)
