@@ -19,21 +19,22 @@ group_corsi <- data.frame(sub = integer(), version = integer(),
 
 for (sub in subs){
   sid <- as.numeric(substring(sub,5,7))
-  
-  if (sub == 'sub-38') {
-    print('skipping missing data')
-  } 
-  else {
+
   for (ver in corsi_ver){
-    corsi_data <- read.csv(file.path(data_path, sub, paste(sub, "corsi.csv", sep = "_")), header = TRUE)
-    ver_data <- corsi_data %>% filter(version == ver)
-    
-    correct_seqlen <- ver_data$seq_len[which(ver_data$correct_seq == 'True')]
-    max_seq_len <- max(correct_seqlen)
-    
+    if (sub == 'sub-38') {
+      max_seq_len <- NA
+      
+    } else {
+      corsi_data <- read.csv(file.path(data_path, sub, paste(sub, "corsi.csv", sep = "_")), header = TRUE)
+      ver_data <- corsi_data %>% filter(version == ver)
+      
+      correct_seqlen <- ver_data$seq_len[which(ver_data$correct_seq == 'True')]
+      max_seq_len <- max(correct_seqlen)
+    }
+      
     scores <- data.frame(sub = sid, version = ver, max_seq_len = max_seq_len)
     group_corsi <- rbind(group_corsi, scores)
-    }
+    
   }
 }
 

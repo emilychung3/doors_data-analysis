@@ -18,13 +18,13 @@ group_data <- data.frame(sub = integer(), max_fw_len = integer(), max_bw_len = i
 
 for (sub in subs){
    sid <- as.numeric(substring(sub,5,7))
-   sub_data <- digit_span %>% filter(Sub == sid) # remove capitals from variable names...
+   sub_data <- digit_span %>% filter(sub == sid) # remove capitals from variable names...
    
-   correct_fw_idx <- which(sub_data$FW.Score == 1)
-   max_fw_seqLen <- max(sub_data$FW.SeqLength[correct_fw_idx])
+   correct_fw_idx <- which(sub_data$fw_score == 1)
+   max_fw_seqLen <- max(sub_data$fw_seqlength[correct_fw_idx])
     
-   correct_bw_idx <- which(sub_data$BW.Score == 1)
-   max_bw_seqLen <- max(sub_data$BW.SeqLen[correct_bw_idx])
+   correct_bw_idx <- which(sub_data$bw_score == 1)
+   max_bw_seqLen <- max(sub_data$bw_seqlength[correct_bw_idx])
    
    sub_digit_span <- data.frame(sub = sid, 
                                 max_fw_digits = max_fw_seqLen, 
