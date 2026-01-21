@@ -14,6 +14,10 @@ get_subs <- function(version) {
               "sub-61", "sub-62", "sub-63", "sub-64", "sub-65", "sub-66", "sub-67", "sub-68", "sub-69", "sub-70",
               "sub-71", 'sub-72', "sub-73", "sub-74", "sub-75", "sub-76", "sub-77", "sub-78", "sub-79", "sub-80",
               "sub-81", "sub-82", "sub-83", "sub-84", "sub-85", "sub-86", "sub-87", "sub-88", "sub-89", "sub-90",
+<<<<<<< HEAD
               "sub-91", "sub-92","sub-93", "sub-94", "sub-95", "sub-96")
+=======
+              "sub-91", "sub-92", "sub-93", "sub-94", "sub-95", "sub-96")
+>>>>>>> b53c18f3c10fb060ccdd4a5a6fc8f40b31a37db4
   }
 } 
