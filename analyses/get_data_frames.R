@@ -7,6 +7,7 @@ library(dplyr)
 
 exp_lt_data <- read.csv("res/exp_lt_trl.csv")
 entropy_data <- read.csv("res/exp_lt_entropy.csv")
+entropy_stay_data <- read.csv("res/exp_lt_entropy.csv")
 learn_onset_data <- read.csv("res/exp_lt_maggi-k4.csv")
 
 # getting data frames for training phase for each participant
@@ -34,7 +35,7 @@ exclude_summary <- gen_error_means %>%
   filter(mean_gen_error > 0.25) 
 exclude_subs <- exclude_summary %>% pull(sub)
 
-if (length(exclude_subs) > 0) { # write exluded subs to csv., if any
+if (length(exclude_subs) > 0) { # write excluded subs to csv., if any
   write.csv(exclude_summary, "res/excluded_subs.csv", row.names = FALSE)
 }
 
@@ -56,7 +57,7 @@ levels(entropy_data$train_type) <- c("Stable", "Variable")
 write.csv(entropy_data, "res/training_entropy.csv", row.names = FALSE)
 
 
-# getting dataframes for transfer phase data
+# getting data frames for transfer phase data
 transfer_data <- exp_lt_data %>% 
   filter(ses == 3)
 transfer_data$train_type <- as.factor(transfer_data$train_type) # renaming conditions and groups
@@ -65,17 +66,29 @@ transfer_data$transfer <- as.factor(transfer_data$transfer)
 levels(transfer_data$transfer) <- c("Novel", "Partial", "Complete")
 
 transfer_data <- transfer_data %>%  # adding a learning task-sets variable
-  mutate(task_set = case_when(sub <= 24 ~ 'A', # hardcoded - change if number of subs change
-                              sub >= 24 & sub <= 48 ~ 'B',
-                              sub >= 49 & sub <= 72 ~ 'C',
-                              sub >= 73 ~ 'D'))
-
+  mutate(task_set = factor(
+    case_when(sub <= 24 ~ 'A', # hardcoded - change if number of subs change
+              sub >= 24 & sub <= 48 ~ 'B',
+              sub >= 49 & sub <= 72 ~ 'C',
+              sub >= 73 ~ 'D'), 
+    levels = c('A', 'B', 'C', 'D')))
 
 transfer_data <- transfer_data %>% 
+  mutate(first_transfer = case_when(order_id == 1 | order_id == 2 ~ "novel first",
+                                    order_id == 3 | order_id == 4 ~ "complete first",
+                                    order_id == 5 | order_id == 6 ~ "partial first"))
+
+transfer_first_half <- transfer_data %>% 
   filter(!sub %in% exclude_subs) %>% # only relevant if there are any subs to exclude
-  group_by(sub, ses, train_type, transfer, order_id, task_set) %>% 
-  # slice_head(n = 20) %>% # looking at first 20 trials only
+  group_by(sub, ses, train_type, transfer, order_id, task_set, first_transfer) %>% 
+  slice_head(n = 20) %>% # looking at first 20 trials only
   summarise(mean_acc  = mean(accuracy),
+            mean_set_error = mean(learned_setting_errors)) 
+
+transfer_data <- transfer_data %>% 
+  filter(!sub %in% exclude_subs) %>%
+  group_by(sub, ses, train_type, transfer, order_id, task_set, first_transfer) %>% 
+  summarise(mean_acc  = mean(accuracy), # this is averaging across all trials
             mean_set_error = mean(learned_setting_errors)) 
 
 maggi_data <- learn_onset_data %>% filter(ses == 3)
@@ -95,10 +108,11 @@ post_exclusion_transfer <- all_transfer_data %>% filter(k4_onset != Inf) # remov
 
 write.csv(non_learners, "res/nonlearners.csv", row.names = FALSE)
 write.csv(all_transfer_data, "res/all_transfer_data.csv", row.names = FALSE)
+write.csv(transfer_first_half, "res/transfer_first_half.csv", row.names = FALSE)
 write.csv(post_exclusion_transfer, "res/post_exclusion_transfer_data.csv", row.names = FALSE)
 
-# now getting filtering data for between subject analyses
-# only containing data for participants' first transfer task
+# now getting filtering data for between-subject analyses
+# to only contain data for participants' first transfer task
 all_btwn_subs_data <- all_transfer_data %>%
   filter(
     (order_id %in% c(1, 2) & transfer == "Novel") |
@@ -115,8 +129,7 @@ write.csv(btwn_non_learners, "res/btwn_nonlearners.csv", row.names = FALSE)
 write.csv(all_btwn_subs_data, "res/all_btwn_transfer_data.csv", row.names = FALSE)
 write.csv(btwn_post_exclusion_data, "res/post_exclusion_btwn_data.csv", row.names = FALSE)
 
-
-## getting dataframes to look at training performance overtime
+## getting data frames to look at training performance overtime
 training_epochs <- training_by_epoch %>% 
   group_by(sub, ses, train_type, epoch) %>% 
   summarise(mean_task_jumps  = mean(context_changes),
@@ -128,3 +141,14 @@ training_epochs <- training_epochs %>%
             group_gen_error = mean(mean_gen_error)) 
 
 write.csv(training_epochs, "res/training_by_epoch.csv", row.names = FALSE)
+
+## getting bias scores partial/(partial+complete) and partial/(partial+novel)
+all_transfer_wide <- transfer_data %>% 
+  select(-mean_set_error) %>% 
+  pivot_wider(names_from = transfer, values_from = mean_acc)
+transfer_bias_scores <- all_transfer_wide %>% 
+  mutate('bias_ovr_complete' = Partial/(Partial+Complete),
+         'bias_ovr_novel' = Partial/(Partial+Novel)) %>% 
+  select(-Novel, -Complete, -Partial)
+
+write.csv(transfer_bias_scores, "res/transfer_bias_scores.csv", row.names = FALSE)
