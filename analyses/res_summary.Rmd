@@ -17,6 +17,7 @@ library(gghalves)
 
 library(afex) # libraries for performing planned contrast analyses
 library(emmeans)
+library(BayesFactor)
 afex_options(emmeans_model = "multivariate")
 
 # load dataframes
@@ -32,6 +33,8 @@ learn_onset_data <- read.csv(here("res/post_exclusion_transfer_data.csv"))
 all_btwn_transfer_data <- read.csv(here("res/all_btwn_transfer_data.csv"))
 btwn_non_learners <- read.csv(here("res/btwn_nonlearners.csv"))
 learn_onset_btwn_data <- read.csv(here("res/post_exclusion_btwn_data.csv"))
+
+ind_diffs <- read.csv(here("res/all_individual_differences.csv"))
 
 ```
 
@@ -1306,6 +1309,63 @@ set_error_between_subs <- ggplot(data = data,
   )
 
 print(set_error_between_subs) # same order issue as above
+
+```
+
+
+## Individual Difference Measures
+
+### Target location memory
+```{r target location memory, echo=FALSE, warnings=FALSE}
+data <- ind_diffs
+iv <- ind_diffs$train_type
+x_axis_lab <- 'Group'
+dv <- ind_diffs$mean_locs_correct
+y_axis_lab <- 'mean locations correct'
+these_cols <- wes_palette("AsteroidCity3")[c(1, 4)]
+
+
+target_mem <- ggplot(data = data, 
+                 mapping = aes(x = iv, y = dv, colour = iv, fill = iv)) +
+    geom_half_violin(side = "r", scale = "width", 
+                     width = 0.6,
+                     alpha = 0.3, linewidth = 0.3, 
+                     trim = FALSE) +
+    geom_half_point(side = "l", alpha = 0.5, size = 1.5,
+                    width = 0.6,
+                    position = position_jitter(width = 0.05)) +
+    geom_boxplot(width = 0.1, alpha = 0.9, linewidth = 0.3, colour = "grey20", 
+                 outlier.shape = NA) +
+    scale_y_continuous(limits = c(0, max(dv)), breaks = seq(0, 4, by = 1)) +
+    scale_fill_manual(values = these_cols) +
+    scale_colour_manual(values = these_cols) +
+    labs(x = x_axis_lab, y = y_axis_lab) + 
+    stat_summary(fun = mean, geom = "point", shape = 23, size = 2, 
+                colour = "grey20", fill = "grey20") +
+    theme_classic(base_size = 16) +
+    theme(
+      legend.position = "none",
+      strip.background = element_rect(fill = "#f0e6da", colour = NA),
+      strip.text = element_text(face = "bold", size = 14),
+      axis.line.x = element_line(color = "grey20", linewidth = 0.5),
+      axis.line.y = element_line(color = "grey20", linewidth = 0.5),
+      axis.ticks = element_line(color = "grey20", linewidth = 0.5),
+      axis.text = element_text(color = "grey20", size = 14),
+      axis.title = element_text(face = 'bold', color = "grey20", size = 16),
+      axis.title.x = element_text(margin = margin(t = 10)),
+      axis.title.y = element_text(margin = margin(r = 10)) 
+    )
+    
+print(target_mem)
+
+
+```
+
+#### Exploratory analyses
+We can compare the number of target locations remembered between groups to determine whether training or transfer interrupted memory of the locations.
+
+```{r}
+ttestBF(formula = mean_locs_correct ~ train_type, data = ind_diffs)
 
 ```
 
