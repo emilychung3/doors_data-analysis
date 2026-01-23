@@ -126,7 +126,7 @@ training_with_descriptives <- left_join(training_data, var_summary, by = c("trai
 
 outliers_summary <- training_with_descriptives %>% 
   filter(mean_task_jumps> upper_limit | mean_task_jumps < lower_limit)
-n_outliers_per_cond <- outliers %>% 
+n_outliers_per_cond <- outliers_summary %>% 
   group_by(train_type, switch) %>% 
   summarise(n = n())
 print(n_outliers_per_cond)
@@ -206,6 +206,7 @@ print(task_jumps)
 
 
 ```
+
 *The interaction effect remains significant after running the analyses excluding outliers.*
 ```{r task jumps excluding outliers, echo=FALSE, warning=FALSE}
 
@@ -259,6 +260,8 @@ task_jumps <- ggplot(data = data,
     
 print(task_jumps)
 
+ggsave(here("res/plots/task_jumps.png"), plot = task_jumps, height = 5, width = 7.5)
+
 ```
 
 ```{r comparisons on task jumps excluding outliers, echo=FALSE, warning=FALSE}
@@ -300,14 +303,13 @@ contrast(task_jumps_emm, simple_effects, adjust = "bonferroni")
 Transition entropy quantifies the average variance in participants’ transitions between doors for a given task. First, for each door (or state, [s]) we compute the probability of a transition to the next door (or state, [s’]). We then compute the entropy over the vector of transition probabilities (s -> all s’) and then sum the entropies across all states (Σ(H(s)). This measure quantifies the degree to which a participants’ behaviour during training deviates from being perfectly predictable. Transition entropy during training is averaged across Task A and B. Higher routine variability scores indicate greater variability in search paths during the training stage, and less routine behaviour. 
 
 The following plot and analysis is performed with transition entropy across all trials (switch and stay).
-```{r transition entropy stay, echo = FALSE, warning=FALSE}
+```{r transition entropy, echo = FALSE, warning=FALSE}
 data <- training_entropy
 iv <- training_entropy$train_type
 x_axis_lab <- 'Group'
 dv <- training_entropy$mean_entropy
 y_axis_lab <- 'Transition Entropy'
 these_cols <- wes_palette("AsteroidCity3")[c(1, 4)]
-
 
 entropy <- ggplot(data = data, 
                  mapping = aes(x = iv, y = dv, colour = iv, fill = iv)) +
@@ -373,7 +375,7 @@ data <- training_entropy_stay
 iv <- training_entropy_stay$train_type
 x_axis_lab <- 'Group'
 dv <- training_entropy_stay$mean_entropy
-y_axis_lab <- 'Transition Entropy'
+y_axis_lab <- 'Transition Entropy on stay trials'
 these_cols <- wes_palette("AsteroidCity3")[c(1, 4)]
 
 
@@ -426,6 +428,77 @@ print(entropy_stay_anova)
 
 ```
 
+Is there a subset of people in the stable group who are lost/confused and driving the bimodaility in transition entropy on stay trials? And is this contributing to a higher task jumps and general error scores? We can see if if we plot transition entropy (TE) against task jumps and general errors (see below).
+
+```{r TE subset, echo-FALSE, warning=FALSE}
+# first, we should find the subset of participants who fall within the clusters of interest
+
+# getting participants who score > 20 on TE for Stay trials only
+TE_subset <- training_entropy_stay %>%  
+  filter(mean_entropy > 20)
+
+TE_subset_ids <- TE_subset %>% pull(sub) %>% unique
+
+training_data <- training_data %>%
+  mutate(TE_subset = if_else(sub %in% TE_subset_ids,"TRUE", "FALSE"))
+
+# do these participants also have a TE > 20  when calculated over ALL trials? YES
+training_subset <- training_entropy %>% 
+  filter(sub %in% TE_subset_ids)
+
+
+```
+
+```{r TE and task jumps, echo=FALSE, warning=FALSE} 
+# plotting task jumps on stay trials with mean entropy across all trials
+training_stay_only <- training_data %>% 
+  filter(switch == 'Stay')
+training_stay_only <- inner_join(training_stay_only, training_entropy, by = c('sub', 'train_type'))
+
+TE_task_jumps_stay <- ggplot(data = training_stay_only, 
+                        mapping = aes(x = mean_entropy, 
+                                      y = mean_task_jumps,
+                                      color = TE_subset)) +
+  geom_point() +
+  geom_vline(xintercept = 20, linetype = 'dashed', colour = 'grey') +
+  facet_wrap(~train_type) +
+  labs(title = 'Jumps on stay trials only',
+       x = 'transition entropy (TE)', 
+       y = 'task jumps', 
+       color = "TE > 20 on stay trials") +
+  scale_color_manual(values = c("TRUE" = "#D55E00", "FALSE" = "grey10")) +
+  theme_classic()
+print(TE_task_jumps_stay)
+
+ggsave(here("res/plots/TExstay-jumps.png"), plot = TE_task_jumps_stay, 
+       width = 7, height = 5)
+
+# plotting task jumps on switch trials with mean entropy across all trials
+training_switch_only <- training_data %>% 
+  filter(switch == 'Switch')
+training_switch_only <- inner_join(training_switch_only, training_entropy, by = c('sub', 'train_type'))
+
+TE_task_jumps_switch <- ggplot(data = training_switch_only, 
+                        mapping = aes(x = mean_entropy, 
+                                      y = mean_task_jumps,
+                                      color = TE_subset)) +
+  geom_point() +
+  geom_vline(xintercept = 20, linetype = 'dashed', colour = 'grey') +
+  facet_wrap(~train_type) +
+  labs(title = 'Jumps on switch trials only',
+       x = 'transition entropy (TE)', 
+       y = 'task jumps', 
+       color = "TE > 20 on stay trials") +
+  scale_color_manual(values = c("TRUE" = "#D55E00", "FALSE" = "grey10")) +
+  theme_classic()
+print(TE_task_jumps_switch)
+
+ggsave(here("res/plots/TExswitch-jumps.png"), plot = TE_task_jumps_switch, 
+       width = 7, height = 5)
+
+```
+
+
 ### General errors
 
 A General Error is made when a door which belongs to neither Task A nor B is selected. General errors is used to determine the extent to which memory of target locations is disrupted by the frequency of switching between tasks during training and is represented as a proportion of the total number of door selections made. An average general error of p = 0.5 across trials in the training stage corresponds to chance level performance and thus indicates that a participant has failed to remember the target locations. 
@@ -476,6 +549,24 @@ ggsave(here("res/plots/general_errors.png"), plot = gen_errors, width = 7, heigh
 
 ```
 
+```{r general errors histogram}
+
+gen_err_hist <- ggplot(data = training_data, aes(x = mean_gen_error)) +
+  geom_histogram(fill = 'orange') +
+  theme_classic() +
+  labs(x = "general error", y = "frequency") +
+  scale_y_continuous(breaks = seq(from = 0, to = 70, by = 10)) +
+  theme(
+    axis.line.x = element_line(color = "grey20", linewidth = 0.5),
+    axis.line.y = element_line(color = "grey20", linewidth = 0.5),
+    axis.title.x = element_text(margin = margin(t = 10)),
+    axis.title.y = element_text(margin = margin(r = 10))
+    )
+
+ggsave(here("res/plots/general_error_hist.png"), plot = gen_err_hist, width = 7, height = 5)
+
+```
+
 Participants who have an average general error greater than 0.25 on *stay* trials during training will be excluded from analyses of the test phase. No subjects met this criteria, and thus, no participants will be excluded from analyses of transfer phase.
 
 
@@ -500,7 +591,7 @@ print(var_summary)
 training_with_descriptives <- left_join(training_data, var_summary, by = c("train_type", "switch"))
 
 outliers_summary <- training_with_descriptives %>% filter(mean_gen_error > upper_limit)
-n_outliers_per_cond <- outliers %>% 
+n_outliers_per_cond <- outliers_summary %>% 
   group_by(train_type, switch) %>% 
   summarise(n = n())
 print(n_outliers_per_cond)
@@ -531,6 +622,7 @@ print(gen_error_emm)
 ```
 
 This analysis can also be performed on the dataset excluding outliers for general errors. Outlier cutoffs are marked in a dotted line, but participants are excluded casewise.
+
 ```{r general errors with outlier cutoffs, echo = FALSE, warning=FALSE}
 data <- training_data
 iv <- training_data$switch
@@ -646,7 +738,7 @@ print(gen_error_anova_post_excl)
 #### Follow up analyses
 Given the significant interaction effect on general errors, I will now contrast general errors between groups for each trial type separately, and between trial types for each group separately.
 
-```{r task jumps follow up contrasts}
+```{r gen error follow up contrasts}
 
 # simple effect contrast to probe difference between groups for each trial type separately, 
 # and difference in trial type of each group separately
@@ -659,6 +751,50 @@ simple_effects <- list('stay_btwn_group' = c(1, -1, 0, 0),
 
 contrast(gen_error_emm, simple_effects, adjust = "bonferroni")
 
+
+```
+
+Now, we should check if the same subset of participants who scored > 20 on transition entropy is accounting for the higher general error scores in the stable group.
+
+```{r TE and general error, echo=FALSE, warning=FALSE} 
+# plotting task jumps on stay trials with mean entropy across all trials
+
+TE_gen_error_stay <- ggplot(data = training_stay_only, 
+                        mapping = aes(x = mean_entropy, 
+                                      y = mean_gen_error,
+                                      color = TE_subset)) +
+  geom_point() +
+  geom_vline(xintercept = 20, linetype = 'dashed', colour = 'grey') +
+  facet_wrap(~train_type) +
+  labs(title = 'General Error on stay trials only',
+       x = 'transition entropy (TE)', 
+       y = 'general error', 
+       color = "TE > 20 on stay trials") +
+  scale_color_manual(values = c("TRUE" = "#D55E00", "FALSE" = "grey10")) +
+  theme_classic()
+print(TE_gen_error_stay)
+
+ggsave(here("res/plots/TExstay-gen-error.png"), plot = TE_gen_error_stay, 
+       width = 7, height = 5)
+
+# plotting task jumps on switch trials with mean entropy across all trials
+TE_gen_error_switch <- ggplot(data = training_switch_only, 
+                        mapping = aes(x = mean_entropy, 
+                                      y = mean_gen_error,
+                                      color = TE_subset)) +
+  geom_point() +
+  geom_vline(xintercept = 20, linetype = 'dashed', colour = 'grey') +
+  facet_wrap(~train_type) +
+  labs(title = 'General error on switch trials only',
+       x = 'transition entropy (TE)', 
+       y = 'general error', 
+       color = "TE > 20 on stay trials") +
+  scale_color_manual(values = c("TRUE" = "#D55E00", "FALSE" = "grey10")) +
+  theme_classic()
+print(TE_gen_error_switch)
+
+ggsave(here("res/plots/TExswitch-gen-error.png"), plot = TE_gen_error_switch, 
+       width = 7, height = 5)
 
 ```
 
@@ -792,10 +928,10 @@ To remove mitigate any order effects, accuracy can be assessed using a between s
 ```{r accuracy between subjects, echo=FALSE, warning=FALSE}
 
 # specifying the order that I want my transfer conditions to appear
-all_btwn_transfer_data$transfer <- factor(
-  all_transfer_data$transfer,
-  levels = c("Novel", "Partial", "Complete")
-)
+# all_btwn_transfer_data$transfer <- factor(
+#   all_transfer_data$transfer,
+#   levels = c("Novel", "Partial", "Complete")
+# )
 
 # specifying key variables
 data <- all_btwn_transfer_data
@@ -875,7 +1011,7 @@ ggplot(data = bias_scores, aes(x = bias_ovr_novel)) +
     axis.title.x = element_text(margin = margin(t = 10)),
     axis.title.y = element_text(margin = margin(r = 10)))
 
-ggplot(data = entropy_data, aes(x = mean_entropy)) +
+ggplot(data = training_entropy, aes(x = mean_entropy)) +
   geom_histogram(fill = 'pink') +
   theme_classic() +
   labs(x = "Transition entropy", y = "Frequency") +
@@ -909,7 +1045,10 @@ ggsave(here("res/plots/qq_novel_bias.png"), plot = qq_novel_bias, width = 7, hei
 
 Based off visual inspection of Q-Q plots, the data for transition entropy and bias are skewed. Hence, a log transformation will be performed on the data.
 
-```{r transforming bias scores and TE}
+```{r transforming bias scores and TE, echo = FALSE, warnings = FALSE}
+
+# combined the data into one data frame first
+bias_scores <- inner_join(bias_scores, training_entropy, by = c('sub', 'train_type'))
 
 bias_scores <- bias_scores %>% 
   mutate(log_bias_comp = log(bias_ovr_complete),
@@ -920,7 +1059,7 @@ bias_scores <- bias_scores %>%
 
 Now, lets visualise the transformed data in Q-Q plots again.
 
-```{r Q-Q plots post transformation}
+```{r Q-Q plots post transformation, echo = FALSE, warnings = FALSE}
 
 # Q-Q plots
 qq_TE_transformed <- ggplot(data = bias_scores, aes(sample = log_entropy)) + 
@@ -946,9 +1085,6 @@ ggsave(here("res/plots/qq_TE_transformed.png"), plot = qq_TE_transformed, width 
 
 Now we can plot the correlation between transition entropy and the two bias scores.
 ```{r TE and bias correlation, echo = FALSE, warning = FALSE}
-
-# combined the data into one data frame first
-bias_scores <- inner_join(bias_scores, entropy_data, by = c('sub', 'train_type'))
 
 # correlating TE with bias scores over complete accuracy
 TExcomplete_bias <- ggplot(data = bias_scores, 
@@ -1116,7 +1252,7 @@ print(btwn_non_learners)
 #### Planned Analyses
 Planned contrasts are performed for learning onset as they are for accuracy.
 
-```{r planned comparisons learn onset, echo=FALSE}
+```{r planned comparisons learn onset, echo=FALSE, warnings = FALSE}
 # fit the data to an ANOVA model
 learn_onset_anova <- aov_ez('sub',
                          'k4_onset', 
@@ -1489,7 +1625,6 @@ accuracy_by_taskset <- ggplot(data = data,
   scale_fill_manual(values = these_cols) +
   scale_colour_manual(values = these_cols) +
   facet_grid(~task_set*train_type) +
-  #facet_wrap(~task_set) +
   theme(
     legend.position = "none",
     strip.background = element_rect(fill = "#f0e6da", colour = "NA"),
