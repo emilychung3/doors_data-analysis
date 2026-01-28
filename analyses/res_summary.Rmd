@@ -4,6 +4,9 @@ author: "E. Chung"
 output: html_document
 date: "2026-01-07"
 ---
+# Document Summary
+
+This document contains the plots and analyses for all measures used to assess performance in the doors experiment. Planned analyses are conducted for the training and transfer phase as outlined in the pregistration document for this study *[INSERT LINK HERE]*.
 
 ```{r setup, include=FALSE}
 # load libraries 
@@ -34,13 +37,10 @@ all_btwn_transfer_data <- read.csv(here("res/all_btwn_transfer_data.csv"))
 btwn_non_learners <- read.csv(here("res/btwn_nonlearners.csv"))
 learn_onset_btwn_data <- read.csv(here("res/post_exclusion_btwn_data.csv"))
 
+
 ind_diffs <- read.csv(here("res/all_individual_differences.csv"))
 
 ```
-
-# Document Summary
-
-This document contains the plots and analyses for all measures used to analyse performance in the doors experiment. Planned analyses are conducted for the training and transfer phase as outlined in the pregistration document for this study *[INSERT LINK HERE]*.
 
 ## Training Stage
 
@@ -105,9 +105,9 @@ ggsave(here("res/plots/task_jumps.png"), plot = task_jumps,
 
 We will perform a 2 (Group: stable vs. variable) x 2 (Trial Type: stay vs. switch) interaction contrast.
 
-Before that, we should check if the data meets the assumptions for homogeneity of variance, by checking if the variance ratio exceed 1.5. The variance ratio is the ratio between the largest and smallest variance values across conditions. We should also check for outliers, which are classified as scored greater than 2.5 SDs from the mean for each condition.
+Before that, we should check if the data meets the assumptions for homogeneity of variance and normality, by checking if the variance ratio exceed 1.5. The variance ratio is the ratio between the largest and smallest variance values across conditions. We should also check for outliers, which are classified as scored greater than 2.5 SDs from the mean for each grou x trial type condition. The following output shows a summary of the descriptive statistics and number of outliers from each condition.
 
-```{r variance on task jump conditions, echo=FALSE}
+```{r variance on task jump conditions, echo=FALSE, warning=FALSE, fig.show="hold"}
 # getting mean, variance and standard deviation for each condition
 var_summary <- training_data %>% 
   group_by(train_type, switch) %>% 
@@ -134,13 +134,12 @@ print(n_outliers_per_cond)
 outlier_ids_jumps <- outliers_summary %>% pull(sub) %>% unique()
 
 ```
-*The variance ratio for between the largest and smallest variance exceeds 1.5.*
 
+*The variance ratio for between the largest and smallest variance exceeds 1.5.* Since this is likely driven by a few extreme points which are unlikely to be corrected by transformation, we will perform the analysis as planned with all the data **AND** post-hoc, excluding outliers.
 
-We will perform the analysis with AND without outliers.
-The following analyses are performed with all data points, including outliers identified above.
-*This analysis returns a significant main effect of trial type(switch) and interaction.*
-```{r planned comparisons task jumps, echo=FALSE}
+When performed **full data set**, the analysis returns a **significant interaction**, as predicted. The main effect of trial type is also significant.
+
+```{r planned comparisons task jumps, echo=FALSE, warning=FALSE}
 # fit the data to an ANOVA model
 task_jumps_anova <- aov_ez('sub',
                          'mean_task_jumps', 
@@ -155,131 +154,13 @@ task_jumps_emm <- emmeans(task_jumps_anova, c("train_type", "switch"))
 
 print(task_jumps_emm)
 
-
-```
-The following analyses are performed excluding outliers identified shown in the plot below.
-
-```{r task jumps outlier cut offs, echo=FALSE, warning=FALSE}
-data <- training_data
-iv <- training_data$switch
-x_axis_lab <- 'Trial type'
-dv <- training_data$mean_task_jumps
-y_axis_lab <- 'Task Jumps'
-these_cols <- wes_palette("AsteroidCity3")[c(1, 4)]
-
-
-task_jumps <- ggplot(data = data, 
-                 mapping = aes(x = iv, y = dv, colour = iv, fill = iv)) +
-    geom_half_violin(side = "r", scale = "width", 
-                     width = 0.6,
-                     alpha = 0.3, linewidth = 0.3, 
-                     trim = FALSE) +
-    geom_half_point(side = "l", alpha = 0.5, size = 1.5,
-                    width = 0.6,
-                    position = position_jitter(width = 0.05)) +
-    geom_boxplot(width = 0.1, alpha = 0.9, linewidth = 0.3, colour = "grey20", 
-                 outlier.shape = NA) +
-    geom_hline(data = training_with_descriptives, 
-                aes(yintercept = upper_limit), linetype = 'dashed', colour = 'black') +
-    scale_y_continuous(limits = c(0, max(dv)), breaks = seq(0, 7.5, by = 1)) +
-    scale_fill_manual(values = these_cols) +
-    scale_colour_manual(values = these_cols) +
-    labs(x = x_axis_lab, y = y_axis_lab) + 
-    stat_summary(fun = mean, geom = "point", shape = 23, size = 2, 
-                colour = "grey20", fill = "grey20") +
-    facet_wrap(~train_type) +
-    theme_classic(base_size = 16) +
-    theme(
-      legend.position = "none",
-      strip.background = element_rect(fill = "#f0e6da", colour = NA),
-      strip.text = element_text(face = "bold", size = 14),
-      axis.line.x = element_line(color = "grey20", linewidth = 0.5),
-      axis.line.y = element_line(color = "grey20", linewidth = 0.5),
-      axis.ticks = element_line(color = "grey20", linewidth = 0.5),
-      axis.text = element_text(color = "grey20", size = 14),
-      axis.title = element_text(face = 'bold', color = "grey20", size = 16),
-      axis.title.x = element_text(margin = margin(t = 10)),
-      axis.title.y = element_text(margin = margin(r = 10)) 
-    )
-    
-print(task_jumps)
-
-
 ```
 
-*The interaction effect remains significant after running the analyses excluding outliers.*
-```{r task jumps excluding outliers, echo=FALSE, warning=FALSE}
+##### Follow up analyses
 
-# remove outliers from training data
-training_post_excl <- training_with_descriptives %>% 
-  filter(!sub %in% outlier_ids_jumps)
-
-```
-
-
-```{r task jumps post exclusion, echo=FALSE, warning=FALSE}
-data <- training_post_excl
-iv <- training_post_excl$switch
-x_axis_lab <- 'Trial type'
-dv <- training_post_excl$mean_task_jumps
-y_axis_lab <- 'Task Jumps'
-these_cols <- wes_palette("AsteroidCity3")[c(1, 4)]
-
-
-task_jumps <- ggplot(data = data, 
-                 mapping = aes(x = iv, y = dv, colour = iv, fill = iv)) +
-    geom_half_violin(side = "r", scale = "width", 
-                     width = 0.6,
-                     alpha = 0.3, linewidth = 0.3, 
-                     trim = FALSE) +
-    geom_half_point(side = "l", alpha = 0.5, size = 1.5,
-                    width = 0.6,
-                    position = position_jitter(width = 0.05)) +
-    geom_boxplot(width = 0.1, alpha = 0.9, linewidth = 0.3, colour = "grey20", 
-                 outlier.shape = NA) +
-    scale_y_continuous(limits = c(0, max(dv)), breaks = seq(0, 7.5, by = 1)) +
-    scale_fill_manual(values = these_cols) +
-    scale_colour_manual(values = these_cols) +
-    labs(x = x_axis_lab, y = y_axis_lab) + 
-    stat_summary(fun = mean, geom = "point", shape = 23, size = 2, 
-                colour = "grey20", fill = "grey20") +
-    facet_wrap(~train_type) +
-    theme_classic(base_size = 16) +
-    theme(
-      legend.position = "none",
-      strip.background = element_rect(fill = "#f0e6da", colour = NA),
-      strip.text = element_text(face = "bold", size = 14),
-      axis.line.x = element_line(color = "grey20", linewidth = 0.5),
-      axis.line.y = element_line(color = "grey20", linewidth = 0.5),
-      axis.ticks = element_line(color = "grey20", linewidth = 0.5),
-      axis.text = element_text(color = "grey20", size = 14),
-      axis.title = element_text(face = 'bold', color = "grey20", size = 16),
-      axis.title.x = element_text(margin = margin(t = 10)),
-      axis.title.y = element_text(margin = margin(r = 10)) 
-    )
-    
-print(task_jumps)
-
-ggsave(here("res/plots/task_jumps.png"), plot = task_jumps, height = 5, width = 7.5)
-
-```
-
-```{r comparisons on task jumps excluding outliers, echo=FALSE, warning=FALSE}
-
-# fit the data to an ANOVA model
-jumps_anova_post_excl <- aov_ez('sub',
-                         'mean_task_jumps', 
-                         training_post_excl, 
-                         between = 'train_type',
-                         within = 'switch')
-
-print(jumps_anova_post_excl)
-
-```
-
-
-#### Follow up analyses
 To investigate the source of interaction in task jumps, I will contrast task jumps between groups for each trial type separately and across trial types for each group separately.
+
+This analysis returns two significant simple effects. Task jumps is higher on stay trials in the variable group compared to the stable group, and also higher on switch trials than stay trials for the stable group.
 
 ```{r task jumps follow up contrasts}
 
@@ -294,6 +175,152 @@ simple_effects <- list('stay_btwn_group' = c(1, -1, 0, 0),
 
 contrast(task_jumps_emm, simple_effects, adjust = "bonferroni")
 
+```
+
+#### Post hoc analyses
+Now, we will perform the same analysis **excluding the outliers**. There are 4 data points which are classified as outliers but participants are excluded case wise.
+
+```{r task jumps excluding outliers, echo=FALSE, warning=FALSE}
+
+# remove outliers from training data
+training_post_excl <- training_with_descriptives %>% 
+  filter(!sub %in% outlier_ids_jumps)
+
+```
+
+```{r task jumps outlier cut offs, echo=FALSE, warning=FALSE, fig.show='hold', out.width="50%"}
+
+ # plotting the full training data with dotted lines showing the cutoffs
+# data <- training_data
+iv <- training_data$switch
+x_axis_lab <- 'Trial type'
+dv <- training_data$mean_task_jumps
+y_axis_lab <- 'Task Jumps'
+these_cols <- wes_palette("AsteroidCity3")[c(1, 4)]
+
+task_jumps_cutoffs <- ggplot(data = training_data,
+                 mapping = aes(x = iv, y = dv, colour = iv, fill = iv)) +
+    geom_half_violin(side = "r", scale = "width",
+                     width = 0.6,
+                     alpha = 0.3, linewidth = 0.3,
+                     trim = FALSE) +
+    geom_half_point(side = "l", alpha = 0.5, size = 1.5,
+                    width = 0.6,
+                    position = position_jitter(width = 0.05)) +
+    geom_boxplot(width = 0.1, alpha = 0.9, linewidth = 0.3, colour = "grey20",
+                 outlier.shape = NA) +
+    geom_hline(data = training_with_descriptives,
+                aes(yintercept = upper_limit), linetype = 'dashed', colour = 'black') +
+    scale_y_continuous(limits = c(0, max(dv)), breaks = seq(0, 7.5, by = 1)) +
+    scale_fill_manual(values = these_cols) +
+    scale_colour_manual(values = these_cols) +
+    labs(x = x_axis_lab, y = y_axis_lab) +
+    stat_summary(fun = mean, geom = "point", shape = 23, size = 2,
+                colour = "grey20", fill = "grey20") +
+    facet_wrap(~train_type) +
+    theme_classic(base_size = 16) +
+    theme(
+      legend.position = "none",
+      strip.background = element_rect(fill = "#f0e6da", colour = NA),
+      strip.text = element_text(face = "bold", size = 14),
+      axis.line.x = element_line(color = "grey20", linewidth = 0.5),
+      axis.line.y = element_line(color = "grey20", linewidth = 0.5),
+      axis.ticks = element_line(color = "grey20", linewidth = 0.5),
+      axis.text = element_text(color = "grey20", size = 14),
+      axis.title = element_text(face = 'bold', color = "grey20", size = 16),
+      axis.title.x = element_text(margin = margin(t = 10)),
+      axis.title.y = element_text(margin = margin(r = 10))
+    )
+
+print(task_jumps_cutoffs)   
+```
+
+
+This plot shows task jumps after outliers are removed. The scale for this plot is smaller.
+
+```{r task jumps post excl, echo=FALSE, warning=FALSE}
+# now plotting the task jumps data after outliers have been excluded
+# data <- training_post_excl
+iv <- training_post_excl$switch
+x_axis_lab <- 'Trial type'
+dv <- training_post_excl$mean_task_jumps
+y_axis_lab <- 'Task Jumps'
+these_cols <- wes_palette("AsteroidCity3")[c(1, 4)]
+
+task_jumps_postexcl <- 
+  ggplot(data = training_post_excl, 
+         mapping = aes(x = iv, y = dv, colour = iv, fill = iv)) +
+    geom_half_violin(side = "r", scale = "width", 
+                     width = 0.6,
+                     alpha = 0.3, linewidth = 0.3, 
+                     trim = FALSE) +
+    geom_half_point(side = "l", alpha = 0.5, size = 1.5,
+                    width = 0.6,
+                    position = position_jitter(width = 0.05)) +
+    geom_boxplot(width = 0.1, alpha = 0.9, linewidth = 0.3, colour = "grey20", 
+                 outlier.shape = NA) +
+    scale_y_continuous(limits = c(0, max(dv)), breaks = seq(0, 7.5, by = 1)) +
+    scale_fill_manual(values = these_cols) +
+    scale_colour_manual(values = these_cols) +
+    labs(x = x_axis_lab, y = y_axis_lab) + 
+    stat_summary(fun = mean, geom = "point", shape = 23, size = 2, 
+                colour = "grey20", fill = "grey20") +
+    facet_wrap(~train_type) +
+    theme_classic(base_size = 16) +
+    theme(
+      legend.position = "none",
+      strip.background = element_rect(fill = "#f0e6da", colour = NA),
+      strip.text = element_text(face = "bold", size = 14),
+      axis.line.x = element_line(color = "grey20", linewidth = 0.5),
+      axis.line.y = element_line(color = "grey20", linewidth = 0.5),
+      axis.ticks = element_line(color = "grey20", linewidth = 0.5),
+      axis.text = element_text(color = "grey20", size = 14),
+      axis.title = element_text(face = 'bold', color = "grey20", size = 16),
+      axis.title.x = element_text(margin = margin(t = 10)),
+      axis.title.y = element_text(margin = margin(r = 10)) 
+    )
+
+
+print(task_jumps_postexcl)
+
+
+```
+
+
+When performed with the data set excluding outliers, *the interaction effect remains significant.* Both main effects of group and trial type also now return significant.
+
+```{r comparisons on task jumps excluding outliers, echo=FALSE, warning=FALSE}
+
+# fit the data to an ANOVA model
+jumps_anova_postexcl <- aov_ez('sub',
+                         'mean_task_jumps', 
+                         training_post_excl, 
+                         between = 'train_type',
+                         within = 'switch')
+
+print(jumps_anova_postexcl)
+
+# get estimated marginal means
+jumps_emm_postexcl <- emmeans(jumps_anova_postexcl, c("train_type", "switch"))
+
+print(jumps_emm_postexcl)
+
+```
+
+Now for performing the same follow up contrasts. The same contrasts are significant in this analysis, with the *addition of a third significant simple effect* of trial type for the variable group. Task jumps is higher on stay trials than on switch trials for those in the variable group.
+
+```{r task jumps post-excl follow up contrasts, echo=FALSE, warning=FALSE}
+
+# simple effect contrast to probe difference between groups for each trial type separately, 
+# and difference in trial type of each group separately
+
+simple_effects <- list('stay_btwn_group' = c(1, -1, 0, 0),
+                       'switch_btwn_group' = c(0, 0, 1, -1), 
+                       'stable_trial_type' = c(1, 0, -1, 0),
+                       'variable_trial_type' = c(0, 1, 0, -1)
+                       )
+
+contrast(jumps_emm_postexcl, simple_effects, adjust = "bonferroni")
 
 ```
 
@@ -428,6 +455,57 @@ print(entropy_stay_anova)
 
 ```
 
+Why is there a difference in task jumps but no difference between transition entropy between groups? Higher task jumps in the variable group may be due to a greater number of clicks in general. To look at this, we can compare the avaerage number of clicks made by the stable and variable groups across all trials.
+
+```{r nclicks, echo=FALSE, warning=FALSE}
+
+nclicks <- read.csv(here("res/training_nclicks.csv"))
+  
+data <- nclicks
+iv <- nclicks$train_type
+x_axis_lab <- 'Group'
+dv <- nclicks$nclicks
+y_axis_lab <- 'n clicks'
+these_cols <- wes_palette("AsteroidCity3")[c(1, 4)]
+
+
+nclicks_btwn <- ggplot(data = data, 
+                 mapping = aes(x = iv, y = dv, colour = iv, fill = iv)) +
+    geom_half_violin(side = "r", scale = "width", 
+                     width = 0.6,
+                     alpha = 0.3, linewidth = 0.3, 
+                     trim = FALSE) +
+    geom_half_point(side = "l", alpha = 0.5, size = 1.5,
+                    width = 0.6,
+                    position = position_jitter(width = 0.05)) +
+    geom_boxplot(width = 0.1, alpha = 0.9, linewidth = 0.3, colour = "grey20", 
+                 outlier.shape = NA) +
+    scale_fill_manual(values = these_cols) +
+    scale_colour_manual(values = these_cols) +
+    labs(x = x_axis_lab, y = y_axis_lab) + 
+    stat_summary(fun = mean, geom = "point", shape = 23, size = 2, 
+                colour = "grey20", fill = "grey20") +
+    theme_classic(base_size = 16) +
+    theme(
+      legend.position = "none",
+      strip.background = element_rect(fill = "#f0e6da", colour = NA),
+      strip.text = element_text(face = "bold", size = 14),
+      axis.line.x = element_line(color = "grey20", linewidth = 0.5),
+      axis.line.y = element_line(color = "grey20", linewidth = 0.5),
+      axis.ticks = element_line(color = "grey20", linewidth = 0.5),
+      axis.text = element_text(color = "grey20", size = 14),
+      axis.title = element_text(face = 'bold', color = "grey20", size = 16),
+      axis.title.x = element_text(margin = margin(t = 10)),
+      axis.title.y = element_text(margin = margin(r = 10)) 
+    )
+    
+print(nclicks_btwn)
+
+ggsave(here("res/plots/nclicks.png"), plot = nclicks_btwn, width = 7, height = 5)
+
+```
+
+
 Is there a subset of people in the stable group who are lost/confused and driving the bimodaility in transition entropy on stay trials? And is this contributing to a higher task jumps and general error scores? We can see if if we plot transition entropy (TE) against task jumps and general errors (see below).
 
 ```{r TE subset, echo-FALSE, warning=FALSE}
@@ -501,7 +579,9 @@ ggsave(here("res/plots/TExswitch-jumps.png"), plot = TE_task_jumps_switch,
 
 ### General errors
 
-A General Error is made when a door which belongs to neither Task A nor B is selected. General errors is used to determine the extent to which memory of target locations is disrupted by the frequency of switching between tasks during training and is represented as a proportion of the total number of door selections made. An average general error of p = 0.5 across trials in the training stage corresponds to chance level performance and thus indicates that a participant has failed to remember the target locations. 
+A General Error is made when a door which belongs to neither Task A nor B is selected. General error is used to determine the extent to which memory of target locations is disrupted by the frequency of switching between tasks during training and is represented as a proportion of the total number of door selections made. An average general error of p = 0.4 across trials in the training stage corresponds to chance level performance and thus indicates that a participant has failed to remember the target locations. 
+
+Participants who have an average general error greater than 0.25 on *stay* trials during training will be excluded from analyses of the test phase. No subjects met this criteria, and thus, no participants will be excluded from analyses of transfer phase.
 
 ```{r general errors, echo = FALSE, warning=FALSE}
 data <- training_data
@@ -548,11 +628,12 @@ print(gen_errors)
 ggsave(here("res/plots/general_errors.png"), plot = gen_errors, width = 7, height = 5)
 
 ```
+The following plot shows the distribution of all general error scores, collapsed across group and trial type.
 
-```{r general errors histogram}
+```{r general errors histogram, echo = FALSE, warning=FALSE}
 
 gen_err_hist <- ggplot(data = training_data, aes(x = mean_gen_error)) +
-  geom_histogram(fill = 'orange') +
+  geom_histogram(fill = 'orange', bins = 30) +
   theme_classic() +
   labs(x = "general error", y = "frequency") +
   scale_y_continuous(breaks = seq(from = 0, to = 70, by = 10)) +
@@ -563,17 +644,17 @@ gen_err_hist <- ggplot(data = training_data, aes(x = mean_gen_error)) +
     axis.title.y = element_text(margin = margin(r = 10))
     )
 
+print(gen_err_hist)
 ggsave(here("res/plots/general_error_hist.png"), plot = gen_err_hist, width = 7, height = 5)
 
 ```
-
-Participants who have an average general error greater than 0.25 on *stay* trials during training will be excluded from analyses of the test phase. No subjects met this criteria, and thus, no participants will be excluded from analyses of transfer phase.
 
 
 #### Planned analyses
 We will assess for a 2 (Group: stable vs. variable) x 2 (Trial Type: switch vs. stay) interaction for general errors.
 
-First, we will check whether the data violates assumptions of homogeneity of variance for the ANOVA by checking if the variance ratio exceeds 1.5.
+First, we will check whether the data violates assumptions of homogeneity of variance and normality for the ANOVA by checking if the variance ratio exceeds 1.5. The following output shows the descriptives data and number of outliers for each Group x Trial Type condition.
+
 ```{r variance on general error conditions, echo = FALSE, warnings = FALSE}
 # get mean, variance and standard deviations for each condition
 var_summary <- training_data %>% 
@@ -600,9 +681,10 @@ outlier_ids_gen_err <- outliers_summary %>% pull(sub) %>% unique()
 
 ```
 
-We will perform the planned analysis **with** all outliers as outlined in the preregistration, and **without** outliers.
+Once again, the variance ratio exceeds 1.5 for general error. As we did with task jumps, we will perform the planned analysis *with the full data set*, AND post-hoc *excluding* outliers.
 
-The following analyses are performed with all data.
+The following analyses are performed with the **full data set**. The ANOVA performed returns a **significant Group x Trial Type interaction**. A main effect of trial type is detected.
+
 ```{r planned comparisons general_errors, echo=FALSE}
 # fit the data to an ANOVA model
 gen_error_anova <- aov_ez('sub',
@@ -618,10 +700,40 @@ gen_error_emm <- emmeans(gen_error_anova, c("train_type", "switch"))
 
 print(gen_error_emm)
 
+```
+
+##### Follow up analyses
+Given the significant interaction effect on general errors, I will now contrast general errors between groups for each trial type separately, and between trial types for each group separately.
+
+The effect of trial type is **significant for the stable group**. General errors is higher on switch trials than stay trials.
+
+```{r gen error follow up contrasts}
+
+# simple effect contrast to probe difference between groups for each trial type separately, 
+# and difference in trial type of each group separately
+
+simple_effects <- list('stay_btwn_group' = c(1, -1, 0, 0),
+                       'switch_btwn_group' = c(0, 0, 1, -1), 
+                       'stable_trial_type' = c(1, 0, -1, 0),
+                       'variable_trial_type' = c(0, 1, 0, -1)
+                       )
+
+contrast(gen_error_emm, simple_effects, adjust = "bonferroni")
+
 
 ```
 
-This analysis can also be performed on the dataset excluding outliers for general errors. Outlier cutoffs are marked in a dotted line, but participants are excluded casewise.
+#### Post-hoc Analyses
+We will also perform the analysis from above excluding outliers. Outlier cutoffs are marked in a dotted line in the following plot, but participants are excluded casewise.
+
+```{r gen_errors excluding outliers, echo=FALSE, warning=FALSE}
+
+# remove outliers casewise from training data
+training_post_excl <- training_with_descriptives %>% 
+  filter(!sub %in% outlier_ids_gen_err)
+
+```
+
 
 ```{r general errors with outlier cutoffs, echo = FALSE, warning=FALSE}
 data <- training_data
@@ -669,13 +781,8 @@ print(gen_errors)
 
 ```
 
-```{r gen_errors excluding outliers, echo=FALSE, warning=FALSE}
 
-# remove outliers casewise from training data
-training_post_excl <- training_with_descriptives %>% 
-  filter(!sub %in% outlier_ids_gen_err)
-
-```
+This plot shows the distribution of the data after excluding outliers.
 
 ```{r general errors post exclusion, echo = FALSE, warning=FALSE}
 data <- training_post_excl
@@ -721,7 +828,8 @@ print(gen_errors)
 
 ```
 
-*This analysis produces the same result as above.*
+Now, assessing for the same interaction effect with the current data set, we see that the **interaction effect remains**.
+
 ```{r comparisons on gen_errors excluding outliers, echo=FALSE, warning=FALSE}
 
 # fit the data to an ANOVA model
@@ -735,10 +843,10 @@ print(gen_error_anova_post_excl)
 
 ```
 
-#### Follow up analyses
-Given the significant interaction effect on general errors, I will now contrast general errors between groups for each trial type separately, and between trial types for each group separately.
+##### Follow Up Analyses
+To assess the source of this interaction, we will once again perform the perform the same follow up contrast analyses of simple effects. Analyses with the current data set returns the same significant simple effect of trial type in the stable group.
 
-```{r gen error follow up contrasts}
+```{r gen error follow up contrasts post excl}
 
 # simple effect contrast to probe difference between groups for each trial type separately, 
 # and difference in trial type of each group separately
@@ -754,7 +862,9 @@ contrast(gen_error_emm, simple_effects, adjust = "bonferroni")
 
 ```
 
-Now, we should check if the same subset of participants who scored > 20 on transition entropy is accounting for the higher general error scores in the stable group.
+
+#### Poor performers?
+Now, we should check if the same subset of participants who scored > 20 on transition entropy is accounting for the higher general error scores in the stable group. To do this, we can correlate transition entropy with general errors.
 
 ```{r TE and general error, echo=FALSE, warning=FALSE} 
 # plotting task jumps on stay trials with mean entropy across all trials
@@ -984,7 +1094,7 @@ To determine whether the strength of a routine correlated with performance in tr
 1. novel condition where bias = partial/(partial + novel)
 2. complete transfer where bias = partial/(partial + complete)
 
-To do this, we will first check whether the data for transition entropy and the bias scores are skewed.
+To do this, we will first check whether the data for transition entropy and the bias scores is skewed.
 
 ```{r bias and TE skewness, echo = FALSE, warning = FALSE}
 
@@ -1086,25 +1196,25 @@ ggsave(here("res/plots/qq_TE_transformed.png"), plot = qq_TE_transformed, width 
 Now we can plot the correlation between transition entropy and the two bias scores.
 ```{r TE and bias correlation, echo = FALSE, warning = FALSE}
 
-# correlating TE with bias scores over complete accuracy
-TExcomplete_bias <- ggplot(data = bias_scores, 
-                           aes(x = mean_entropy,
-                               y = bias_ovr_complete)) +
-  geom_point(colour = "pink") +
-  theme_classic()
-print(cor(bias_scores$bias_ovr_complete, bias_scores$mean_entropy)) # r = 0.01
-model <- lm(bias_scores$bias_ovr_complete ~ bias_scores$mean_entropy)
-summary(model)
-
-# correlating TE with bias scores over novel accuracy
-TExnovel_bias <- ggplot(data = bias_scores, 
-                           aes(x = mean_entropy,
-                               y = bias_over_novel)) +
-  geom_point(colour = "pink") +
-  theme_classic()
-print(cor(bias_scores$bias_ovr_novel, bias_scores$mean_entropy)) # r = 0.12
-
-print(TExcomplete_bias)
+# # correlating TE with bias scores over complete accuracy
+# TExcomplete_bias <- ggplot(data = bias_scores, 
+#                            aes(x = mean_entropy,
+#                                y = bias_ovr_complete)) +
+#   geom_point(colour = "orange") +
+#   theme_classic()
+# print(cor(bias_scores$bias_ovr_complete, bias_scores$mean_entropy)) # r = 0.01
+# model <- lm(bias_scores$bias_ovr_complete ~ bias_scores$mean_entropy)
+# summary(model)
+# 
+# # correlating TE with bias scores over novel accuracy
+# TExnovel_bias <- ggplot(data = bias_scores, 
+#                            aes(x = mean_entropy,
+#                                y = bias_over_novel)) +
+#   geom_point(colour = "orange") +
+#   theme_classic()
+# print(cor(bias_scores$bias_ovr_novel, bias_scores$mean_entropy)) # r = 0.12
+# 
+# print(TExcomplete_bias)
 
 
 ```
@@ -1250,7 +1360,7 @@ print(btwn_non_learners)
 ```
 
 #### Planned Analyses
-Planned contrasts are performed for learning onset as they are for accuracy.
+Planned contrasts are performed for learning onset as they are for accuracy. *No comparisons return significant.*
 
 ```{r planned comparisons learn onset, echo=FALSE, warnings = FALSE}
 # fit the data to an ANOVA model
@@ -1293,6 +1403,113 @@ print(interactions_learn_onset)
 
 ```
 
+
+### Number of locations learned
+
+This measure tells us whether participants are following a strategy of using 1, 2, 3, or 4 target locations on the last trial of each transfer condition (i.e., by the end of that transfer condition).
+
+```{r ndoors learned, echo = FALSE, warning=FALSE}
+
+# specifying the order that I want my transfer conditions to appear
+all_transfer_data$transfer <- factor(
+  all_transfer_data$transfer,
+  levels = c("Novel", "Partial", "Complete")
+)
+
+# specifying key variables
+data <- all_transfer_data
+iv <- all_transfer_data$transfer
+x_axis_lab <- 'Transfer type'
+dv <- all_transfer_data$n_learned
+y_axis_lab <- 'N locations learned'
+these_cols <- c("#8da0cb", "#e78ac3", "#a6d854")
+
+# now plot
+jitter_pos <- position_jitterdodge(jitter.width = 0.01) 
+  
+ndoors <- ggplot(data = data, 
+                mapping = aes(x = iv, y = dv, colour = iv, fill = iv)) +
+  geom_point(aes(group = sub), 
+             alpha = 0.3, 
+             size = 1.5,
+             position = jitter_pos) +
+  geom_line(aes(group = sub),
+            alpha = 0.3, 
+            colour = "grey",
+            position = jitter_pos) +
+  geom_boxplot(width = 0.2, 
+               alpha = 0.8, 
+               linewidth = 0.3, 
+               colour = 'grey20', 
+              outlier.shape = NA) +
+  stat_summary(fun = mean, geom = "point", shape = 23, size = 2, 
+               colour = "grey20", fill = "grey20") +
+  scale_y_continuous(limits = c(0,4), breaks = seq(0, 4, by = 1)) +
+  labs(x = x_axis_lab, y = y_axis_lab) +
+  theme_classic(base_size = 16)+
+  scale_fill_manual(values = these_cols) +
+  scale_colour_manual(values = these_cols) +
+  facet_wrap(~train_type) +
+  theme(
+    legend.position = "none",
+    strip.background = element_rect(fill = "#f0e6da", colour = "NA"),
+    strip.text = element_text(face = "bold", size = 14),
+    axis.line.x = element_line(color = "grey20", linewidth = 0.5),
+    axis.line.y = element_line(color = "grey20", linewidth = 0.5),
+    axis.ticks = element_line(color = "grey20", linewidth = 0.5),
+    axis.text = element_text(color = "grey20", size = 14),
+    axis.title = element_text(face = "bold", color = "grey20", size = 16),
+    axis.title.x = element_text(margin = margin(t = 10)),
+    axis.title.y = element_text(margin = margin(r = 10)) 
+  )
+
+print(ndoors)
+
+```
+
+#### Planned Analyses
+Planned contrasts are performed for n learned as they are for accuracy and learn onset. *No comparisons return significant.*
+
+```{r planned comparisons n learned, echo=FALSE, warnings = FALSE}
+# fit the data to an ANOVA model
+ndoors_anova <- aov_ez('sub',
+                         'n_learned', 
+                         all_transfer_data, 
+                         between = 'train_type',
+                         within = 'transfer')
+
+print(ndoors_anova)
+
+# get estimated marginal means
+ndoors_emm <- emmeans(ndoors_anova, c("train_type", "transfer"))
+
+print(ndoors_emm)
+
+# specify contrasts and run analyses for:
+group_main <- c(1, -1, 1, -1, 1, -1)
+
+## within family, (k = 3)
+novel_vs_part <- c(1, 1, -1, -1, 0, 0) 
+part_vs_comp <- c(0, 0, 1, 1, -1, -1) 
+novel_vs_comp <- c(1, 1, 0, 0, -1, -1) 
+within_main <- list("novelvs.part" = novel_vs_part,
+                    "partvs.comp" = part_vs_comp,
+                    "novelvs.comp" = novel_vs_comp)
+transfer_main_ndoors<- contrast(ndoors_emm, within_main, adjust = "bonferroni")
+
+print(transfer_main_ndoors)
+
+
+## interaction family, (k = 2)
+novel_part_int <- group_main*novel_vs_part
+part_comp_int <- group_main*part_vs_comp
+interactions <- list("groupxnovelvs.part" = novel_part_int, 
+                     "groupxpartvs.comp" = part_comp_int)
+interactions_ndoors <- contrast(ndoors_emm, interactions, adjust = "bonferroni")
+
+print(interactions_ndoors)
+
+```
 
 ### Setting Errors
 Setting-error quantifies the extent to which participants apply previously learned target locations which are not relevant to the current task. Since the number of relevant doors differ between the transfer and novel conditions, setting-error for partial and complete transfer will be calculated differently to the novel task condition.  
@@ -1508,7 +1725,7 @@ ttestBF(formula = mean_locs_correct ~ train_type, data = ind_diffs)
 
 ## Additional Analyses
 
-#### Task jumps over time 
+### Task jumps over time 
 We can also look at task jumps overtime.
 
 ```{r task jumps by epoch, echo=FALSE, warning=FALSE}
@@ -1526,13 +1743,17 @@ print(jumps_by_epoch)
 
 
 ### Transfer Accuracy by First Transfer Condition
-To determine whther performance one one transfer condition affected performance on subsequent transfer conditions, we can plot the accuracy data based on the first transfer condition people received.
+To determine whether performance one one transfer condition affected performance on subsequent transfer conditions, we can plot the accuracy data based on the first transfer condition people received.
 
 ```{r accuracy by first transfer condition, echo = FALSE, warning=FALSE}
 
 all_transfer_data$first_transfer <- factor(
   all_transfer_data$first_transfer,
   levels = c("novel first", "partial first", "complete first")
+)
+all_transfer_data$transfer <- factor(
+  all_transfer_data$transfer,
+  levels = c("Novel", "Partial", "Complete")
 )
 
 data <- all_transfer_data
@@ -1585,6 +1806,23 @@ print(accuracy_by_first_trf)
 
 ```
 
+#### Exploratory analyses
+We can determine whether order affects performance on transfer by assessing for a three way interaction between first transfer condition, group, and transfer condition.
+
+*Interaction is not significant*
+
+```{r order interaction, echo=FALSE, warning=FALSE}
+
+# fit the data to an ANOVA model
+order_anova <- aov_ez('sub',
+                      'mean_acc', 
+                      all_transfer_data, 
+                      between = c("first_transfer", 'train_type'),
+                      within = 'transfer')
+
+print(order_anova)
+
+```
 
 
 ### Transfer Accuracy by Task-set
