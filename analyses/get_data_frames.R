@@ -7,7 +7,7 @@ library(dplyr)
 
 exp_lt_data <- read.csv("res/exp_lt_trl.csv")
 entropy_data <- read.csv("res/exp_lt_entropy.csv")
-entropy_stay_data <- read.csv("res/exp_lt_entropy.csv")
+# entropy_stay_data <- read.csv("res/exp_lt_entropy.csv")
 learn_onset_data <- read.csv("res/exp_lt_maggi-k4.csv")
 
 # getting data frames for training phase for each participant
@@ -28,10 +28,11 @@ training_by_epoch <- training_data %>%  # for later when looking at training dat
                            t >= 240 & t < 280 ~ 7,
                            t >= 280 ~ 8))
 
-gen_error_means <- training_data %>%  # checking which subs have mean gen_error>0.25
-  group_by(sub) %>%                   # across all training trials to exclude from transfer
+gen_error_stay <- training_data %>%  # checking which subs have mean gen_error>0.25 on stay trials only
+  filter(switch == 'Stay') %>%        # to later exclude from transfer
+  group_by(sub) %>%                   
   summarise(mean_gen_error = mean(general_errors))
-exclude_summary <- gen_error_means %>% 
+exclude_summary <- gen_error_stay %>% 
   filter(mean_gen_error > 0.25) 
 exclude_subs <- exclude_summary %>% pull(sub)
 
@@ -39,12 +40,22 @@ if (length(exclude_subs) > 0) { # write excluded subs to csv., if any
   write.csv(exclude_summary, "res/excluded_subs.csv", row.names = FALSE)
 }
 
+# getting a data frame with the number of average number of clicks per trial across all trials
+nclicks <- training_data %>% 
+  group_by(sub, train_type) %>% 
+  summarise(nclicks = mean(n_clicks))
+
+# getting data frame for task jumps, gen error and nclicks across switch and stay trials
 training_data <- training_data %>%  
   group_by(sub, ses, train_type, switch) %>% 
   summarise(mean_task_jumps  = mean(context_changes), # mean task jumps and
-            mean_gen_error = mean(general_errors))    # general error
+            mean_gen_error = mean(general_errors),    # general error
+            mean_nclicks = mean(n_clicks))            # n clicks
+
 
 write.csv(training_data, "res/training_jumps_gen-error.csv", row.names = FALSE)
+write.csv(nclicks, "res/training_nclicks.csv", row.names = FALSE)
+
 
 # getting transition entropy for training phase
 entropy_data <- entropy_data %>% 
@@ -99,7 +110,7 @@ levels(maggi_data$transfer) <- c("Novel", "Partial", "Complete")
 
 maggi_data <- maggi_data %>% 
   rename("sub" = "sid") %>% 
-  select(-context, -train_type, -ses, - nsamples)
+  select(-context, -train_type, -ses, -nsamples)
 
 all_transfer_data <- inner_join(transfer_data, maggi_data, by = c("sub", "transfer")) 
 non_learners <- all_transfer_data %>%  # find subs who never learn 4 doors
