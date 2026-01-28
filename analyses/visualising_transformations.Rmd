@@ -1,0 +1,467 @@
+---
+title: "visualising_transformations"
+author: E. Chung
+output: html_document
+date: "2026-01-27"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Document Summary
+In this document, I am determining the most appropriate transformation of transition entropy and bias scores by visualising the data, before and after transformation in historgrams and Q-Q plots. This is crucial to ensure that the data meets requirements of normality when analysing the data.
+
+I will visualise the following transformations:
+* log
+* square root
+* inverse
+
+Some helpful links on :
+* QQ plot shapes and interpretations - https://www.datacamp.com/tutorial/qq-plot
+* Transforming distributions of different shapes - https://www.r-bloggers.com/2020/01/a-guide-to-data-transformation/
+* Detailed transformation notes for medical statistics - https://www-users.york.ac.uk/~mb55/msc/clinbio/week5/transfm_gif.pdf
+
+```{r set up, echo=FALSE, warning=FALSE}
+
+library(tidyverse)
+library(here)
+
+entropy_data <- read.csv(here("res/training_entropy.csv"))
+bias_scores <- read.csv(here("res/transfer_bias_scores.csv"))
+
+```
+
+# Data Pre-transformation
+## Transition Entropy (TE)
+
+```{r entropy, echo=FALSE, warning=FALSE, fig.show="hold", out.width="50%"}
+# histogram
+entropy_hist <- 
+  ggplot(data = entropy_data, aes(x = mean_entropy)) +
+  geom_histogram(fill = 'orange', bins = 30) +
+  theme_classic() +
+  labs(x = "TE", y = "Frequency") +
+  theme(
+    axis.line.x = element_line(color = "grey20", linewidth = 0.5),
+    axis.line.y = element_line(color = "grey20", linewidth = 0.5),
+    axis.title.x = element_text(margin = margin(t = 10)),
+    axis.title.y = element_text(margin = margin(r = 10)))
+
+# Q-Q plot
+qq_entropy <- 
+  ggplot(data = entropy_data, aes(sample = mean_entropy)) + 
+  geom_qq(colour = 'blue') +
+  geom_qq_line(color = "grey")+
+  labs(title = 'Transition Entropy',
+       x = 'theoretical',
+       y = 'sample') +
+  theme_classic() +
+  theme(
+    axis.line.x = element_line(color = "grey20", linewidth = 0.5),
+    axis.line.y = element_line(color = "grey20", linewidth = 0.5),
+    axis.title.x = element_text(margin = margin(t = 10)),
+    axis.title.y = element_text(margin = margin(r = 10)))
+
+print(entropy_hist)
+print(qq_entropy)
+
+```
+
+The distribution of transition entropy is positively skewed. There is one outlier in this data.
+
+```{r outliers for transition entropy}
+
+# getting mean, variance and standard deviation for each condition
+var_summary <- entropy_data %>% 
+  summarise(mean = mean(mean_entropy),
+            sd = sd(mean_entropy),
+            var = var(mean_entropy))
+
+upper_limit <- var_summary$mean + 2.5*var_summary$sd
+lower_limit <- var_summary$mean - 2.5*var_summary$sd
+
+
+# getting n outliers
+outlier_summary <- entropy_data %>% 
+  filter(mean_entropy > upper_limit | mean_entropy < lower_limit)
+print(outlier_summary)
+
+```
+
+## Bias Score: Partial/(Partial + Complete)
+
+```{r bias scores over complete, echo=FALSE, fig.show='hold', out.width="50%", warning=FALSE}
+
+# histogram
+bias_ovr_comp_hist <- ggplot(data = bias_scores, aes(x = bias_ovr_complete)) +
+  geom_histogram(fill = 'orange', bins = 30) +
+  theme_classic() +
+  labs(x = "Bias Score: Partial/(Partial + Complete)", y = "Frequency") +
+  theme(
+    axis.line.x = element_line(color = "grey20", linewidth = 0.5),
+    axis.line.y = element_line(color = "grey20", linewidth = 0.5),
+    axis.title.x = element_text(margin = margin(t = 10)),
+    axis.title.y = element_text(margin = margin(r = 10)))
+
+# Q-Q plot
+qq_bias_ovr_comp <- ggplot(data = bias_scores, aes(sample = bias_ovr_complete)) + 
+  geom_qq(colour = 'blue') +
+  geom_qq_line(color = "grey")+
+  labs(title = "Q-Q plot for bias scores partial/(partial + complete)",
+        x = 'theoretical',
+        y = 'sample') +
+  theme_classic() +
+  theme(
+    axis.line.x = element_line(color = "grey20", linewidth = 0.5),
+    axis.line.y = element_line(color = "grey20", linewidth = 0.5),
+    axis.title.x = element_text(margin = margin(t = 10)),
+    axis.title.y = element_text(margin = margin(r = 10)))
+
+print(bias_ovr_comp_hist)
+print(qq_bias_ovr_comp)
+
+
+```
+
+The distribution for the bias scores have heavy tails on both sides of the distribution.
+
+How many of these scores are outliers? There are 4 outliers in this data.
+
+```{r outliers for bias over complete}
+
+# getting mean, variance and standard deviation for each condition
+var_summary <- bias_scores %>% 
+  summarise(mean = mean(bias_ovr_complete),
+            sd = sd(bias_ovr_complete),
+            var = var(bias_ovr_complete))
+
+upper_limit <- var_summary$mean + 2.5*var_summary$sd
+lower_limit <- var_summary$mean - 2.5*var_summary$sd
+
+
+# getting n outliers
+outlier_summary <- bias_scores %>% 
+  filter(bias_ovr_complete > upper_limit | bias_ovr_complete < lower_limit)
+print(outlier_summary)
+
+```
+
+
+## Bias Score: Partial/(Partial + Novel)
+
+```{r bias scores over novel, echo=FALSE, fig.show='hold', out.width="50%", warning=FALSE}
+
+bias_ovr_novel_hist <- 
+  ggplot(data = bias_scores, aes(x = bias_ovr_novel)) +
+  geom_histogram(fill = "orange", bins = 30) +
+  theme_classic() +
+  labs(x = "Bias Score: Partial/(Partial + Novel)", y = "Frequency") +
+  theme(
+    axis.line.x = element_line(color = "grey20", linewidth = 0.5),
+    axis.line.y = element_line(color = "grey20", linewidth = 0.5),
+    axis.title.x = element_text(margin = margin(t = 10)),
+    axis.title.y = element_text(margin = margin(r = 10)))
+
+
+# Q-Q plots
+qq_bias_ovr_novel <- ggplot(data = bias_scores, aes(sample = bias_ovr_novel)) + 
+  geom_qq(colour = 'blue') +
+  geom_qq_line(color = "grey")+
+  labs(title = "Q-Q plot for bias scores partial/(partial + novel)",
+        x = 'theoretical',
+        y = 'sample') +
+  theme_classic() +
+  theme(
+    axis.line.x = element_line(color = "grey20", linewidth = 0.5),
+    axis.line.y = element_line(color = "grey20", linewidth = 0.5),
+    axis.title.x = element_text(margin = margin(t = 10)),
+    axis.title.y = element_text(margin = margin(r = 10)))
+
+print(bias_ovr_comp_hist)
+print(qq_bias_ovr_novel)
+
+```
+
+Again, the distribution for this data has heavy tails on both ends of the distribution. 
+
+How many of these are outliers? There are 5 outliers for this measure.
+
+```{r outliers for bias over novel}
+
+# getting mean, variance and standard deviation for each condition
+var_summary <- bias_scores %>% 
+  summarise(mean = mean(bias_ovr_novel),
+            sd = sd(bias_ovr_novel),
+            var = var(bias_ovr_novel))
+
+upper_limit <- var_summary$mean + 2.5*var_summary$sd
+lower_limit <- var_summary$mean - 2.5*var_summary$sd
+
+
+# getting n outliers
+outlier_summary <- bias_scores %>% 
+  filter(bias_ovr_novel > upper_limit | bias_ovr_novel < lower_limit)
+print(outlier_summary)
+
+```
+
+
+# Tranformations
+## Log Transform
+A log transform is the most commonly used transformation. This transformation compresses large positive values and hence, is appropriate for transforming positively skewed data. This may be appropriate for transition entropy, but less for the bias scores.
+
+```{r log transform}
+
+# combined the data into one data frame first
+combined_data <- inner_join(bias_scores, entropy_data, by = c('sub', 'train_type'))
+
+log_data <- combined_data %>% 
+  mutate(bias_comp = log(bias_ovr_complete),
+         bias_novel = log(bias_ovr_novel),
+         entropy = log(mean_entropy))
+
+```
+
+
+```{r QQ post-log transform, echo=FALSE, fig.show="hold", out.width="30%"}
+
+# Q-Q plots
+qq_TE_transformed <- 
+  ggplot(data = log_data, aes(sample = entropy)) + 
+  geom_qq(colour = 'blue') +
+  geom_qq_line(color = "grey")+
+  labs(title = 'Q-Q plots for transition entropy post log transformation',
+      x = 'theoretical',
+      y = 'sample') +
+  theme_classic() +
+  theme(
+    axis.line.x = element_line(color = "grey20", linewidth = 0.5),
+    axis.line.y = element_line(color = "grey20", linewidth = 0.5),
+    axis.title.x = element_text(margin = margin(t = 10)),
+    axis.title.y = element_text(margin = margin(r = 10)))
+
+qq_bias_comp_transformed <- 
+  ggplot(data = log_data, aes(sample = bias_comp)) + 
+  geom_qq(colour = 'blue') +
+  geom_qq_line(color = "grey")+
+  labs(title = "Q-Q plot for bias scores partial/(partial + complete) post log transformation",
+        x = 'theoretical',
+        y = 'sample') +
+  theme_classic() +
+  theme(
+    axis.line.x = element_line(color = "grey20", linewidth = 0.5),
+    axis.line.y = element_line(color = "grey20", linewidth = 0.5),
+    axis.title.x = element_text(margin = margin(t = 10)),
+    axis.title.y = element_text(margin = margin(r = 10)))
+
+qq_bias_novel_transformed <- 
+  ggplot(data = log_data, aes(sample = bias_novel)) + 
+  geom_qq(colour = 'blue') +
+  geom_qq_line(color = "grey")+
+  labs(title = "Q-Q plot for bias scores partial/(partial + novel) post log transformation",
+        x = 'theoretical',
+        y = 'sample') +
+  theme_classic() +
+  theme(
+    axis.line.x = element_line(color = "grey20", linewidth = 0.5),
+    axis.line.y = element_line(color = "grey20", linewidth = 0.5),
+    axis.title.x = element_text(margin = margin(t = 10)),
+    axis.title.y = element_text(margin = margin(r = 10)))
+
+print(qq_TE_transformed)
+print(qq_bias_comp_transformed)
+print(qq_bias_novel_transformed)
+
+```
+
+The log transformation does not make a big difference to the skewedness of the data. Perhaps the log transformation is too strong for transition entropy.
+
+## Square Root Transformation
+The square root can be used to transform positively skewed data by compressing large value, though to a smaller extent than the log transformation. This may be appropriate to transform transition entropy, but will likely not be strong enough to correct for the heavy tails seen in the distribution of bias scores.
+
+```{r square root transform}
+
+sqrt_data <- combined_data %>% 
+  mutate(bias_comp = sqrt(bias_ovr_complete),
+         bias_novel = sqrt(bias_ovr_novel),
+         entropy= sqrt(mean_entropy))
+
+```
+
+
+```{r post sqrt transformation, echo=FALSE, fig.show="hold", out.width="30%"}
+
+# Q-Q plots
+qq_TE_sqrt_transformed <- 
+  ggplot(data = sqrt_data, aes(sample = entropy)) + 
+  geom_qq(colour = 'blue') +
+  geom_qq_line(color = "grey")+
+  labs(title = 'Q-Q plots for transition entropy post sqrt transformation',
+      x = 'theoretical',
+      y = 'sample') +
+  theme_classic() +
+  theme(
+    axis.line.x = element_line(color = "grey20", linewidth = 0.5),
+    axis.line.y = element_line(color = "grey20", linewidth = 0.5),
+    axis.title.x = element_text(margin = margin(t = 10)),
+    axis.title.y = element_text(margin = margin(r = 10)))
+
+qq_bias_comp_transformed <- 
+  ggplot(data = sqrt_data, aes(sample = bias_comp)) + 
+  geom_qq(colour = 'blue') +
+  geom_qq_line(color = "grey")+
+  labs(title = "Q-Q plot for bias scores partial/(partial + complete) post sqrt transformation",
+        x = 'theoretical',
+        y = 'sample') +
+  theme_classic() +
+  theme(
+    axis.line.x = element_line(color = "grey20", linewidth = 0.5),
+    axis.line.y = element_line(color = "grey20", linewidth = 0.5),
+    axis.title.x = element_text(margin = margin(t = 10)),
+    axis.title.y = element_text(margin = margin(r = 10)))
+
+qq_bias_novel_transformed <- 
+  ggplot(data = sqrt_data, aes(sample = bias_novel)) + 
+  geom_qq(colour = 'blue') +
+  geom_qq_line(color = "grey")+
+  labs(title = "Q-Q plot for bias scores partial/(partial + novel) post sqrt transformation",
+        x = 'theoretical',
+        y = 'sample') +
+  theme_classic() +
+  theme(
+    axis.line.x = element_line(color = "grey20", linewidth = 0.5),
+    axis.line.y = element_line(color = "grey20", linewidth = 0.5),
+    axis.title.x = element_text(margin = margin(t = 10)),
+    axis.title.y = element_text(margin = margin(r = 10)))
+
+print(qq_TE_sqrt_transformed)
+print(qq_bias_comp_transformed)
+print(qq_bias_novel_transformed)
+
+
+```
+
+
+As expected, the square root transformation did not correct for the heavy tails of the distribution of bias scores. It did bring the distribution of transition entropy closer to normal. Though not quite enough...
+
+## Inverse (reciprocal)
+
+The inverse transformation takes the reciprocal value of all scores. This is one of the stronger transformations and should not be performed with scores close to zero. For this reason, it may bet suitable for transition entropy, but less for the bias scores.
+
+```{r inverse transform}
+
+inverse_data <- combined_data %>% 
+  mutate(bias_comp = 1/bias_ovr_complete,
+         bias_novel = 1/bias_ovr_novel,
+         entropy= 1/mean_entropy)
+
+```
+
+```{r post inverse transformation, echo=FALSE, fig.show="hold", out.width="30%"}
+
+# Q-Q plots
+qq_TE_transformed <- 
+  ggplot(data = inverse_data, aes(sample = entropy)) + 
+  geom_qq(colour = 'blue') +
+  geom_qq_line(color = "grey")+
+  labs(title = 'Q-Q plots for transition entropy post inverse transformation',
+      x = 'theoretical',
+      y = 'sample') +
+  theme_classic() +
+  theme(
+    axis.line.x = element_line(color = "grey20", linewidth = 0.5),
+    axis.line.y = element_line(color = "grey20", linewidth = 0.5),
+    axis.title.x = element_text(margin = margin(t = 10)),
+    axis.title.y = element_text(margin = margin(r = 10)))
+
+qq_bias_comp_transformed <- 
+  ggplot(data = inverse_data, aes(sample = bias_comp)) + 
+  geom_qq(colour = 'blue') +
+  geom_qq_line(color = "grey")+
+  labs(title = "Q-Q plot for bias scores partial/(partial + complete) post inverse transformation",
+        x = 'theoretical',
+        y = 'sample') +
+  theme_classic() +
+  theme(
+    axis.line.x = element_line(color = "grey20", linewidth = 0.5),
+    axis.line.y = element_line(color = "grey20", linewidth = 0.5),
+    axis.title.x = element_text(margin = margin(t = 10)),
+    axis.title.y = element_text(margin = margin(r = 10)))
+
+qq_bias_novel_transformed <- 
+  ggplot(data = inverse_data, aes(sample = bias_novel)) + 
+  geom_qq(colour = 'blue') +
+  geom_qq_line(color = "grey")+
+  labs(title = "Q-Q plot for bias scores partial/(partial + novel) post inverse transformation",
+        x = 'theoretical',
+        y = 'sample') +
+  theme_classic() +
+  theme(
+    axis.line.x = element_line(color = "grey20", linewidth = 0.5),
+    axis.line.y = element_line(color = "grey20", linewidth = 0.5),
+    axis.title.x = element_text(margin = margin(t = 10)),
+    axis.title.y = element_text(margin = margin(r = 10)))
+
+print(qq_TE_transformed)
+print(qq_bias_comp_transformed)
+print(qq_bias_novel_transformed)
+
+
+```
+
+
+## Arcsine
+I am also interested in how the bias data will look with an arcsin transformation.
+
+```{r arcsin transform, echo=FALSE, fig.show="hold", out.width="30%"}
+
+arcsin_data <- combined_data %>% 
+  mutate(bias_comp = asin(sqrt(bias_ovr_complete)),
+         bias_novel = asin(sqrt(bias_ovr_novel))
+         )
+
+arcsin_hist <- 
+  ggplot(data = arcsin_data, aes(x = bias_comp)) +
+  geom_histogram(fill = 'orange', bins = 30) +
+  theme_classic() +
+  labs(x = "Bias Scores", y = "Frequency") +
+  theme(
+    axis.line.x = element_line(color = "grey20", linewidth = 0.5),
+    axis.line.y = element_line(color = "grey20", linewidth = 0.5),
+    axis.title.x = element_text(margin = margin(t = 10)),
+    axis.title.y = element_text(margin = margin(r = 10)))
+
+print(bias_ovr_comp_hist)
+print(arcsin_hist)
+
+```
+
+
+## Subtract data from the median and transform
+One way to transform heavy tailed data is to fist subtract all the data points from the median, and then apply the relevant transformation on the remaining data. Doing so will set the median value to zero. Then, a transformation for right skewed data can be performed on the absolute values to bring in the heavy tails.
+**How to transform scores below zero?**
+
+What does the data look like after being subtracted from the median?
+```{r data post subtraction}
+
+median_entropy <- median(combined_data$mean_entropy)
+
+post_subtraction <- combined_data %>% 
+  mutate(postsub_entropy = median_entropy - mean_entropy)
+
+postsub_hist <- 
+  ggplot(data = post_subtraction, aes(x = postsub_entropy)) +
+  geom_histogram(fill = 'orange', bins = 30) +
+  theme_classic() +
+  labs(x = "TE", y = "Frequency") +
+  theme(
+    axis.line.x = element_line(color = "grey20", linewidth = 0.5),
+    axis.line.y = element_line(color = "grey20", linewidth = 0.5),
+    axis.title.x = element_text(margin = margin(t = 10)),
+    axis.title.y = element_text(margin = margin(r = 10)))
+
+print(postsub_hist)
+
+
+```
