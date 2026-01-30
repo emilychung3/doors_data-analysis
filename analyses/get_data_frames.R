@@ -146,12 +146,38 @@ training_epochs <- training_by_epoch %>%
   summarise(mean_task_jumps  = mean(context_changes),
             mean_gen_error = mean(general_errors)) 
 
-training_epochs <- training_epochs %>%
+training_epochs_btwn_groups <- training_epochs %>%
   group_by(train_type, epoch) %>% # for looking at task jumps overtime
   summarise(group_task_jumps  = mean(mean_task_jumps),
             group_gen_error = mean(mean_gen_error)) 
 
-write.csv(training_epochs, "res/training_by_epoch.csv", row.names = FALSE)
+write.csv(training_epochs_btwn_groups, "res/training_epochs_btwn_groups.csv", row.names = FALSE)
+
+## performing a median split of participants on general error to look
+## whether general error is stable over time
+
+### 1. get average gen_error across all trials
+average_gen_error <- training_data %>% 
+  group_by(sub, train_type) %>% 
+  summarise(mean = mean(general_errors))
+
+gen_error_median <- median(average_gen_error$mean)
+
+gen_error_groups <- average_gen_error %>% 
+  mutate(error_group = case_when(mean > gen_error_median ~ 'high error',
+                                 mean < gen_error_median ~ 'low error'))
+
+### 2. now, inner join error training_epochs with group membership for each participant
+
+training_epochs <- inner_join(training_epochs, gen_error_groups, by = c('sub', 'train_type'))
+
+med_split_gen_error <- training_epochs %>% 
+  group_by(error_group, epoch) %>%
+  summarise(task_jumps = mean(mean_task_jumps),
+            gen_error = mean(mean_gen_error))
+
+write.csv(med_split_gen_error, "res/med_split_gen_error.csv", row.names = FALSE)
+
 
 ## getting bias scores partial/(partial+complete) and partial/(partial+novel)
 all_transfer_wide <- transfer_data %>% 
