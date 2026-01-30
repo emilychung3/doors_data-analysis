@@ -172,7 +172,7 @@ gen_error_groups <- average_gen_error %>%
 training_epochs <- inner_join(training_epochs, gen_error_groups, by = c('sub', 'train_type'))
 
 med_split_gen_error <- training_epochs %>% 
-  group_by(error_group, epoch) %>%
+  group_by(train_type, error_group, epoch) %>%
   summarise(task_jumps = mean(mean_task_jumps),
             gen_error = mean(mean_gen_error))
 
