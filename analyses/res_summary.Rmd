@@ -628,6 +628,7 @@ print(gen_errors)
 ggsave(here("res/plots/general_errors.png"), plot = gen_errors, width = 7, height = 5)
 
 ```
+
 The following plot shows the distribution of all general error scores, collapsed across group and trial type.
 
 ```{r general errors histogram, echo = FALSE, warning=FALSE}
@@ -1791,12 +1792,13 @@ accuracy_by_first_trf <- ggplot(data = data,
   theme(
     legend.position = "none",
     strip.background = element_rect(fill = "#f0e6da", colour = "NA"),
-    strip.text = element_text(face = "bold", size = 14),
+    strip.text = element_text(face = "bold", size = 9),
     axis.line.x = element_line(color = "grey20", linewidth = 0.5),
     axis.line.y = element_line(color = "grey20", linewidth = 0.5),
     axis.ticks = element_line(color = "grey20", linewidth = 0.5),
-    axis.text = element_text(color = "grey20", size = 14),
-    axis.title = element_text(face = "bold", color = "grey20", size = 16),
+    axis.text = element_text(color = "grey20", size = 9),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.title = element_text(face = "bold", color = "grey20", size = 10),
     axis.title.x = element_text(margin = margin(t = 10)),
     axis.title.y = element_text(margin = margin(r = 10)) 
   )
@@ -1829,7 +1831,14 @@ print(order_anova)
 
 We can also examine whether similarity in the two learned task-sets influences performance on each of the transfer conditions. It may be that when two task sets are more similar (i.e., when there is more overlap in two task-sets), participants are better able to perform partial transfer. The following plot provides an illustration of any differences between the four sets of Task A and B that were given to participants. However, more work would be needed to quantify how similar two task-sets are.
 
+**There is no interaction between task-set configuration, transfer and group.**
+
 ```{r transfer by task-set, echo=FALSE, warning=FALSE}
+
+all_transfer_data$transfer <- factor(
+  all_transfer_data$transfer,
+  levels = c("Novel", "Partial", "Complete")
+)
 
 data <- all_transfer_data
 iv <- all_transfer_data$transfer
@@ -1866,12 +1875,13 @@ accuracy_by_taskset <- ggplot(data = data,
   theme(
     legend.position = "none",
     strip.background = element_rect(fill = "#f0e6da", colour = "NA"),
-    strip.text = element_text(face = "bold", size = 14),
+    strip.text = element_text(face = "bold", size = 9),
     axis.line.x = element_line(color = "grey20", linewidth = 0.5),
     axis.line.y = element_line(color = "grey20", linewidth = 0.5),
     axis.ticks = element_line(color = "grey20", linewidth = 0.5),
-    axis.text = element_text(color = "grey20", size = 14),
-    axis.title = element_text(face = "bold", color = "grey20", size = 16),
+    axis.text = element_text(color = "grey20", size = 9),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.title = element_text(face = "bold", color = "grey20", size = 10),
     axis.title.x = element_text(margin = margin(t = 10)),
     axis.title.y = element_text(margin = margin(r = 10)) 
   )
@@ -1880,3 +1890,18 @@ print(accuracy_by_taskset)
 
 
 ```
+
+
+```{r task-set interaction, echo=FALSE, warning=FALSE}
+
+# fit the data to an ANOVA model
+task_set_anova <- aov_ez('sub',
+                      'mean_acc', 
+                      all_transfer_data, 
+                      between = c("task_set", 'train_type'),
+                      within = 'transfer')
+
+print(task_set_anova)
+
+```
+
