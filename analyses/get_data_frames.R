@@ -7,7 +7,7 @@ library(dplyr)
 
 exp_lt_data <- read.csv("res/exp_lt_trl.csv")
 entropy_data <- read.csv("res/exp_lt_entropy.csv")
-# entropy_stay_data <- read.csv("res/exp_lt_entropy.csv")
+gen_error_events <- read.csv("res/exp_lt_gen-error_events.csv")
 learn_onset_data <- read.csv("res/exp_lt_maggi-k4.csv")
 
 # getting data frames for training phase for each participant
@@ -189,3 +189,27 @@ transfer_bias_scores <- all_transfer_wide %>%
   select(-Novel, -Complete, -Partial)
 
 write.csv(transfer_bias_scores, "res/transfer_bias_scores.csv", row.names = FALSE)
+
+
+## getting distance of gen-errors from the nearest target location of the other
+## task-set during training
+
+gen_error_events$train_type <- as.factor(gen_error_events$train_type)
+levels(gen_error_events$train_type) <- c("Stable", "Variable")
+gen_error_events$switch <- as.factor(gen_error_events$switch)
+levels(gen_error_events$switch) <- c("Stay", "Switch")
+
+gen_error_events <- gen_error_events %>% 
+  mutate(error_dist_ndoors = case_when(gen_error_dist == 1 ~ as.factor(1),
+                                       gen_error_dist == 2 ~ as.factor(2),
+                                       gen_error_dist > 2 ~ '2+')) %>% 
+  select(sub, ses, t, context, door, door_nc, switch, train_type, gen_error_dist, error_dist_ndoors)
+
+gen_error_summary <- gen_error_events %>% 
+  group_by(sub, train_type, switch) %>% 
+  summarise(one_door = mean(error_dist_ndoors == 1),
+            two_door = mean(error_dist_ndoors == 2),
+            two_plus_doors = mean(error_dist_ndoors == '2+'))
+
+write.csv(gen_error_summary, "res/gen_error_summary.csv", row.names = FALSE)
+
