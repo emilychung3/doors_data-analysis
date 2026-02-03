@@ -1725,66 +1725,6 @@ ttestBF(formula = mean_locs_correct ~ train_type, data = ind_diffs)
 
 
 ## Additional Analyses
-
-### Where are the general errors?
-To probe the source of general errors (e.g., whether stable training is causing people to forget the other task set), we can look at the where the general errors are. To do this, I am plotting of general errors which are one, two or 2+ doors away from the nearest target location from the other task set.
-
-```{r gen error distances, echo=FALSE, warning=FALSE}
-
-gen_error_dist <- read.csv(here("res/gen_error_summary.csv"))
-
-gen_error_dist <- gen_error_dist %>% 
-  pivot_longer(cols = c(one_door, two_door, two_plus_doors),
-               names_to = "distance",
-               values_to = "proportion_errors")
-
-data <- gen_error_dist
-iv <- gen_error_dist$distance
-x_axis_lab <- 'n doors away'
-dv <- gen_error_dist$proportion_errors
-y_axis_lab <- 'proportion of total general errors'
-these_cols <- wes_palette("AsteroidCity3")[c(1, 2, 4)]
-jitter_pos <- position_jitterdodge(jitter.width = 0.01) 
-
-gen_error_dist <- ggplot(data = data, 
-                mapping = aes(x = iv, y = dv, colour = iv, fill = iv)) +
-  geom_point(aes(group = sub),
-             alpha = 0.3, 
-             size = 1.5,
-             position = jitter_pos) +
-  stat_summary(fun = mean, geom = "point", shape = 21, size = 2, 
-               colour = "grey20", fill = "grey20") +
-  stat_summary(fun = mean, geom = "line", 
-               aes(group = 1), 
-               colour = 'grey20', 
-               linewidth = 0.5)+
-  scale_y_continuous(limits = c(0, 0.5), breaks = seq(0, 0.5, by = 0.1))  +
-  labs(x = x_axis_lab, y = y_axis_lab) +
-  theme_classic(base_size = 16) +
-  scale_fill_manual(values = these_cols) +
-  scale_colour_manual(values = these_cols) +
-  facet_grid(~ train_type*switch) +
-  theme(
-    legend.position = "none",
-    strip.background = element_rect(fill = "#f0e6da", colour = "NA"),
-    strip.text = element_text(face = "bold", size = 9),
-    axis.line.x = element_line(color = "grey20", linewidth = 0.5),
-    axis.line.y = element_line(color = "grey20", linewidth = 0.5),
-    axis.ticks = element_line(color = "grey20", linewidth = 0.5),
-    axis.text = element_text(color = "grey20", size = 9),
-    axis.title = element_text(face = "bold", color = "grey20", size = 10),
-    axis.title.x = element_text(margin = margin(t = 10)),
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    axis.title.y = element_text(margin = margin(r = 10)) 
-  )
-
-print(gen_error_dist)
-
-
-```
-
-
-
 ### Task jumps over time 
 We can also look at task jumps overtime.
 
@@ -1818,8 +1758,6 @@ gen_error_by_epoch <- ggplot(med_split_data, aes(x = epoch, y = gen_error, colou
   facet_wrap(~train_type)
 
 print(gen_error_by_epoch)
-
-ggsave(here("res/plots/gen-error_by_epoch.png"), plot = gen_error_by_epoch, width = 7, height = 5)
 
 ```
 
