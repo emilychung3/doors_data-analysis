@@ -17,6 +17,7 @@ library(tidyverse)
 library(dplyr)
 
 library(ggplot2) # libraries for plotting data
+library(gridExtra)
 library(wesanderson)
 library(gghalves)
 
@@ -234,6 +235,180 @@ simple_effects <- list('stay_btwn_group' = c(1, -1, 0, 0),
 contrast(gen_error_emm, simple_effects, adjust = "bonferroni")
 
 ```
+#### Are the general error rates stable across time?
+To understand the source of general errors in the poor performers, we can compare general errors on switch and stay trials over time between people who are classified as poor performers, the remaining participants in the stable group, and those in the variable group.
+
+```{r gen error over time, echo=FALSE, warning=FALSE, fig.show = 'hold', out.width = "50%"}
+
+all_epoch_data<- read.csv(here("res/training_epochs.csv"))
+
+subset_epoch_data <- all_epoch_data %>% 
+  filter(sub %in% subs_to_remove) 
+subset_epoch_data <- subset_epoch_data %>% 
+  group_by(train_type, switch, epoch) %>% 
+  summarise(mean_error = mean(mean_gen_error))
+filtered_epoch_data <- all_epoch_data %>% 
+  filter(!sub %in% subs_to_remove)
+filtered_epoch_data <- filtered_epoch_data %>% 
+  group_by(train_type, switch, epoch) %>% 
+  summarise(mean_error = mean(mean_gen_error))
+
+
+subset_gen_error_overtime <- ggplot(subset_epoch_data, aes(x = epoch, y = mean_error, colour = switch, fill = switch)) +
+  geom_point(size = 1.5) +
+  geom_line(linewidth = 0.8) +
+  labs(x = "Epoch", y = "General Error", 
+       colour = 'Trial Type', fill = 'Trial Type') +
+  scale_x_continuous(limits = c(1, 8), breaks = seq(1, 8, by = 1))+
+  theme_classic() +
+  theme(legend.position = "none")
+
+print(subset_gen_error_overtime)
+
+gen_error_overtime <- ggplot(filtered_epoch_data, aes(x = epoch, y = mean_error, colour = switch, fill = switch)) +
+  geom_point(size = 1.5) +
+  geom_line(linewidth = 0.8) +
+  labs(x = "Epoch", y = "General Error", 
+       colour = 'Trial Type', fill = 'Trial Type') +
+  scale_x_continuous(limits = c(1, 8), breaks = seq(1, 8, by = 1))+
+  scale_y_continuous(limits = c(0, 0.4), breaks = seq(0, 0.4, by = 0.1))+
+  theme_classic() +
+  facet_wrap(~train_type)
+
+print(gen_error_overtime)
+
+# ggsave(here("res/plots/gen-error_by_epoch.png"), plot = gen_error_by_epoch, width = 7, height = 5)
+
+
+```
+
+#### Where are the general errors?
+To probe the source of general errors (e.g., whether stable training is causing people to forget the other task set), we can look at the where the general errors are. To do this, I am plotting of general errors which are one, two or 2+ doors away from the nearest target location from the other task set.
+
+```{r separating gen error dataframes, echo=FALSE, warning=FALSE}
+
+# getting summary of error for poor performers and remaining participants
+
+gen_error_events <- read.csv(here("res/exp_lt_gen-error_events.csv"))
+gen_error_events$train_type <- as.factor(gen_error_events$train_type)
+levels(gen_error_events$train_type) <- c("Stable", "Variable")
+gen_error_events$switch <- as.factor(gen_error_events$switch)
+levels(gen_error_events$switch) <- c("Stay", "Switch")
+
+gen_error_events <- gen_error_events %>% 
+  mutate(error_dist_ndoors = case_when(gen_error_dist == 1 ~ as.factor(1),
+                                       gen_error_dist == 2 ~ as.factor(2),
+                                       gen_error_dist > 2 ~ '2+')) %>% 
+  select(sub, ses, t, context, door, door_nc, switch, train_type, gen_error_dist, error_dist_ndoors)
+
+
+subset_error_evts <- gen_error_events %>% 
+  filter(sub %in% subs_to_remove)
+error_evts <- gen_error_events %>% 
+  filter(!sub %in% subs_to_remove)
+
+subset_error_summary <- subset_error_evts %>% 
+  group_by(sub, train_type, switch) %>% 
+  summarise(one_door = mean(error_dist_ndoors == 1),
+            two_door = mean(error_dist_ndoors == 2),
+            two_plus_doors = mean(error_dist_ndoors == '2+'))
+subset_error_summary <- subset_error_summary %>% 
+  pivot_longer(cols = c(one_door, two_door, two_plus_doors),
+               names_to = "distance",
+               values_to = "proportion_errors")
+
+error_summary <- error_evts %>% 
+  group_by(sub, train_type, switch) %>% 
+  summarise(one_door = mean(error_dist_ndoors == 1),
+            two_door = mean(error_dist_ndoors == 2),
+            two_plus_doors = mean(error_dist_ndoors == '2+'))
+error_summary <- error_summary %>% 
+  pivot_longer(cols = c(one_door, two_door, two_plus_doors),
+               names_to = "distance",
+               values_to = "proportion_errors")
+
+```
+
+
+```{r gen error distances, echo=FALSE, warning=FALSE, fig.show='hold', out.width = "50%"}
+
+x_axis_lab <- 'n doors away'
+y_axis_lab <- 'proportion of total general errors'
+these_cols <- wes_palette("AsteroidCity3")[c(1, 2, 4)]
+jitter_pos <- position_jitterdodge(jitter.width = 0.01) 
+
+subset_gen_error_dist <- ggplot(data = subset_error_summary, 
+                mapping = aes(x = distance, y = proportion_errors, colour = distance, fill = distance)) +
+  geom_point(aes(group = sub),
+             alpha = 0.3, 
+             size = 1.5,
+             position = jitter_pos) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 2, 
+               colour = "grey20", fill = "grey20") +
+  stat_summary(fun = mean, geom = "line", 
+               aes(group = 1), 
+               colour = 'grey20', 
+               linewidth = 0.5)+
+  scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, by = 0.25))  +
+  labs(x = x_axis_lab, y = y_axis_lab) +
+  theme_classic(base_size = 16) +
+  scale_fill_manual(values = these_cols) +
+  scale_colour_manual(values = these_cols) +
+  facet_wrap(~switch) +
+  theme(
+    legend.position = "none",
+    strip.background = element_rect(fill = "#f0e6da", colour = "NA"),
+    strip.text = element_text(face = "bold", size = 9),
+    axis.line.x = element_line(color = "grey20", linewidth = 0.5),
+    axis.line.y = element_line(color = "grey20", linewidth = 0.5),
+    axis.ticks = element_line(color = "grey20", linewidth = 0.5),
+    axis.text = element_text(color = "grey20", size = 9),
+    axis.title = element_text(face = "bold", color = "grey20", size = 10),
+    axis.title.x = element_text(margin = margin(t = 10)),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.title.y = element_text(margin = margin(r = 10)) 
+  )
+
+print(subset_gen_error_dist)
+
+gen_error_dist <- ggplot(data = error_summary, 
+                mapping = aes(x = distance, y = proportion_errors, colour = distance, fill = distance)) +
+  geom_point(aes(group = sub),
+             alpha = 0.3, 
+             size = 1.5,
+             position = jitter_pos) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 2, 
+               colour = "grey20", fill = "grey20") +
+  stat_summary(fun = mean, geom = "line", 
+               aes(group = 1), 
+               colour = 'grey20', 
+               linewidth = 0.5)+
+  labs(x = x_axis_lab, y = y_axis_lab) +
+  theme_classic(base_size = 16) +
+  scale_fill_manual(values = these_cols) +
+  scale_colour_manual(values = these_cols) +
+  facet_grid(~ train_type*switch) +
+  theme(
+    legend.position = "none",
+    strip.background = element_rect(fill = "#f0e6da", colour = "NA"),
+    strip.text = element_text(face = "bold", size = 9),
+    axis.line.x = element_line(color = "grey20", linewidth = 0.5),
+    axis.line.y = element_line(color = "grey20", linewidth = 0.5),
+    axis.ticks = element_line(color = "grey20", linewidth = 0.5),
+    axis.text = element_text(color = "grey20", size = 9),
+    axis.title = element_text(face = "bold", color = "grey20", size = 10),
+    axis.title.x = element_text(margin = margin(t = 10)),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.title.y = element_text(margin = margin(r = 10)) 
+  )
+
+print(gen_error_dist)
+
+
+```
+
+
+
 
 ### Transition Entropy
 Transition entropy assess how routine people are in their search paths.
