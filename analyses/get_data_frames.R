@@ -142,15 +142,16 @@ write.csv(btwn_post_exclusion_data, "res/post_exclusion_btwn_data.csv", row.name
 
 ## getting data frames to look at training performance overtime
 training_epochs <- training_by_epoch %>% 
-  group_by(sub, ses, train_type, epoch) %>% 
+  group_by(sub, ses, train_type, switch, epoch) %>% 
   summarise(mean_task_jumps  = mean(context_changes),
             mean_gen_error = mean(general_errors)) 
 
 training_epochs_btwn_groups <- training_epochs %>%
-  group_by(train_type, epoch) %>% # for looking at task jumps overtime
+  group_by(train_type, switch, epoch) %>% # for looking at task jumps overtime
   summarise(group_task_jumps  = mean(mean_task_jumps),
             group_gen_error = mean(mean_gen_error)) 
 
+write.csv(training_epochs, "res/training_epochs.csv", row.names = FALSE)
 write.csv(training_epochs_btwn_groups, "res/training_epochs_btwn_groups.csv", row.names = FALSE)
 
 ## performing a median split of participants on general error to look
