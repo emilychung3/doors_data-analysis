@@ -37,7 +37,6 @@ all_btwn_transfer_data <- read.csv(here("res/all_btwn_transfer_data.csv"))
 btwn_non_learners <- read.csv(here("res/btwn_nonlearners.csv"))
 learn_onset_btwn_data <- read.csv(here("res/post_exclusion_btwn_data.csv"))
 
-
 ind_diffs <- read.csv(here("res/all_individual_differences.csv"))
 
 ```
@@ -1718,8 +1717,41 @@ print(target_mem)
 #### Exploratory analyses
 We can compare the number of target locations remembered between groups to determine whether training or transfer interrupted memory of the locations.
 
-```{r}
+```{r target memory group diff, echo=FALSE, warnings=FALSE}
 ttestBF(formula = mean_locs_correct ~ train_type, data = ind_diffs)
+
+```
+
+
+### Regressing WM measures on TE, Task jumps, and rule learning ratings
+To determine whether spatial working memory may underly how routine people are, we can regress the spatial and verbal working memory measures onto transition entropy, task jumps and rule learning rating from the acqusition stage separately.
+```{r ind diff data for regression, echo=FALSE, warnings=FALSE}
+
+# now, getting task jumps averages across all trials.
+average_jumps <- read.csv(here("res/training_average_jumps.csv"))
+
+# adding transition entropy and jumps data to ind_diffs file to run regression
+regression_data <- inner_join(ind_diffs, average_jumps, by = c('sub', 'train_type'))
+regression_data <- inner_join(regression_data, training_entropy, by = c('sub', 'train_type'))
+
+# removing participants with missing spatial working memory data
+regression_data <- regression_data %>% 
+  filter(is.finite(max_fwd_corsi) & is.finite(max_bwd_corsi))
+
+```
+
+```{r regressing ind diffs, echo=FALSE, warnings=FALSE}
+
+# TE as criterion
+TE <- lm(mean_entropy ~ max_fwd_corsi+max_bwd_corsi+max_fw_digits+max_bw_digits, data=regression_data)
+summary(TE)
+
+# Task jumps as criterion
+jumps <- lm(jumps ~ max_fwd_corsi+max_bwd_corsi+max_fw_digits+max_bw_digits, data=regression_data)
+summary(jumps)
+
+# rule learning ratings
+acq_rule_score <- lm(acq_rule_score ~ max_fwd_corsi+max_bwd_corsi+max_fw_digits+max_bw_digits, data=regression_data)
 
 ```
 

@@ -46,6 +46,11 @@ nclicks <- training_data %>%
   summarise(nclicks = mean(n_clicks))
 
 # getting data frame for task jumps, gen error and nclicks across switch and stay trials
+average_jumps <- training_data %>% 
+  group_by(sub, train_type) %>% 
+  summarise(jumps = mean(context_changes))
+
+
 training_data <- training_data %>%  
   group_by(sub, ses, train_type, switch) %>% 
   summarise(mean_task_jumps  = mean(context_changes), # mean task jumps and
@@ -55,7 +60,7 @@ training_data <- training_data %>%
 
 write.csv(training_data, "res/training_jumps_gen-error.csv", row.names = FALSE)
 write.csv(nclicks, "res/training_nclicks.csv", row.names = FALSE)
-
+write.csv(average_jumps, "res/training_average_jumps.csv", row.names = FALSE)
 
 # getting transition entropy for training phase
 entropy_data <- entropy_data %>% 
@@ -66,7 +71,6 @@ entropy_data$train_type <- as.factor(entropy_data$train_type)
 levels(entropy_data$train_type) <- c("Stable", "Variable")
 
 write.csv(entropy_data, "res/training_entropy.csv", row.names = FALSE)
-
 
 # getting data frames for transfer phase data
 transfer_data <- exp_lt_data %>% 
