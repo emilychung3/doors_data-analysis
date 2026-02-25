@@ -41,7 +41,10 @@ all_btwn_transfer_data <- read.csv(here("res/all_btwn_transfer_data.csv"))
 btwn_non_learners <- read.csv(here("res/btwn_nonlearners.csv"))
 learn_onset_btwn_data <- read.csv(here("res/post_exclusion_btwn_data.csv"))
 
+<<<<<<< HEAD
 task_memory_data <- read.csv(here("res/task_memory_summary.csv"))
+=======
+>>>>>>> f330f780d823eda72276f461c384746cf37ff274
 ind_diffs <- read.csv(here("res/all_individual_differences.csv"))
 
 ```
@@ -1106,6 +1109,78 @@ print(acc_between_subs)
 
 ```
 
+In a separate analyses, we will regress order onto accuracy, and perform the group comparisons on the residuals.
+
+```{r regressing order onto accuracy}
+
+# regress order onto acc and get residuals
+acc_regress_order <- lm(mean_acc ~ order_id, data = all_transfer_data)
+summary(acc_regress_order)
+acc_residuals <- resid(acc_regress_order)
+
+# add residuals to subject data 
+acc_residuals <- cbind(all_transfer_data, acc_residuals) %>% 
+  select(sub, train_type, transfer, order_id, first_transfer, acc_residuals)
+
+```
+
+```{r planned comparisons accuracy residuals, echo=FALSE}
+# fit the data to an ANOVA model
+acc_resid_anova <- aov_ez('sub',
+                         'mean_acc', 
+                         acc_residuals, 
+                         between = 'train_type',
+                         within = 'transfer')
+
+print(acc_resid_anova)
+
+# get estimated marginal means
+acc_resid_emm <- emmeans(acc_resid_anova, c("train_type", "transfer"))
+
+print(acc_resid_emm)
+
+# specify contrasts and run analyses for:
+group_main <- c(1, -1, 1, -1, 1, -1)
+
+## within family, (k = 3)
+novel_vs_part <- c(1, 1, -1, -1, 0, 0) 
+part_vs_comp <- c(0, 0, 1, 1, -1, -1) 
+novel_vs_comp <- c(1, 1, 0, 0, -1, -1) 
+within_main <- list("novelvs.part" = novel_vs_part,
+                    "partvs.comp" = part_vs_comp,
+                    "novelvs.comp" = novel_vs_comp)
+transfer_main_acc <- contrast(acc_resid_emm, within_main, adjust = "bonferroni")
+
+print(transfer_main_acc)
+
+
+## interaction family, (k = 2)
+novel_part_int <- group_main*novel_vs_part
+part_comp_int <- group_main*part_vs_comp
+interactions <- list("groupxnovelvs.part" = novel_part_int, 
+                     "groupxpartvs.comp" = part_comp_int)
+interactions_acc <- contrast(acc_resid_emm, interactions, adjust = "bonferroni")
+
+print(interactions_acc)
+
+```
+
+
+In an **exploratory analysis**, we will regress order onto accuracy, and perform the group comparisons on the residuals.
+
+```{r regressing order onto accuracy}
+
+# regress order onto acc and get residuals
+acc_regress_order <- lm(mean_acc ~ first_transfer, data = all_transfer_data)
+summary(acc_regress_order)
+acc_residuals <- resid(acc_regress_order)
+
+# add results to subject data 
+acc_residuals <- cbind(all_transfer_data, acc_residuals) %>% 
+  select(sub, train_type, transfer, order_id, first_transfer, acc_residuals)
+
+```
+
 To determine whether the strength of a routine correlated with performance in transfer, we will also correlate transition entropy to bias scores for partial transfer accuracy, relative to performance on the:
 1. novel condition where bias = partial/(partial + novel)
 2. complete transfer where bias = partial/(partial + complete)
@@ -1741,12 +1816,17 @@ print(task_mem)
 
 We can compare the number of target locations remembered between groups to determine whether training or transfer interrupted memory of the locations.
 
+<<<<<<< HEAD
 ```{r ttest task location memory, echo = FALSE, warning = FALSE}
+=======
+```{r target memory group diff, echo=FALSE, warnings=FALSE}
+>>>>>>> f330f780d823eda72276f461c384746cf37ff274
 ttestBF(formula = mean_locs_correct ~ train_type, data = ind_diffs)
 
 ```
 
 
+<<<<<<< HEAD
 #### Task memory by transfer
 Now, we can also compare the look at whether the proportion of doors remembered each learned task, in terms of whether it was transferred to the complete condition, partial condition, both, or not transferred at all.
 
@@ -2147,6 +2227,51 @@ verbalWM_desc <- ind_diffs %>%
 ```
 
 ## Exploratory analyses
+=======
+### Regressing WM measures on TE, Task jumps, and rule learning ratings
+To determine whether spatial working memory may underly how routine people are, we can regress the spatial and verbal working memory measures onto transition entropy, task jumps and rule learning rating from the acqusition stage separately.
+
+```{r ind diff data for regression, echo=FALSE, warnings=FALSE}
+
+# now, getting task jumps averages across all trials.
+average_jumps <- read.csv(here("res/training_average_jumps.csv"))
+
+# adding transition entropy and jumps data to ind_diffs file to run regression
+regression_data <- inner_join(ind_diffs, average_jumps, by = c('sub', 'train_type'))
+regression_data <- inner_join(regression_data, training_entropy, by = c('sub', 'train_type'))
+
+# removing participants with missing spatial working memory data
+regression_data <- regression_data %>% 
+  filter(is.finite(max_fwd_corsi) & is.finite(max_bwd_corsi))
+
+```
+
+
+```{r regressing ind diffs, echo=FALSE, warnings=FALSE}
+
+# TE as criterion
+TE <- lm(mean_entropy ~ max_fwd_corsi+max_bwd_corsi+max_fw_digits+max_bw_digits, data=regression_data)
+summary(TE) # model is significant
+vif <- vif(TE)
+tolerance <- 1/vif # tolerance is all > 0.1 - need to perform post-hoc tests of coefficients using scheffe adjustment
+
+# Task jumps as criterion
+jumps <- lm(jumps ~ max_fwd_corsi+max_bwd_corsi+max_fw_digits+max_bw_digits, data=regression_data)
+summary(jumps) # model is significant
+vif <- vif(jumps)
+tolerance <- 1/vif # tolerance is all > 0.1 - perform post-hoc-tests of coefficients as above
+
+# rule learning ratings
+acq_rule_score <- lm(acq_rule_score ~ max_fwd_corsi+max_bwd_corsi+max_fw_digits+max_bw_digits, data=regression_data)
+summary(acq_rule_score) # not significant 
+vif <- vif(acq_rule_score)
+tolerance <- 1/vif
+
+```
+
+
+## Additional Analyses
+>>>>>>> f330f780d823eda72276f461c384746cf37ff274
 ### Task jumps over time 
 We can also look at task jumps overtime.
 
