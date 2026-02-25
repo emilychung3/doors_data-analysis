@@ -7,13 +7,11 @@ library(dplyr)
 # reading all the data files
 corsi <- read.csv('res/corsi_scores.csv')
 digit_span <- read.csv('res/digit_span_scores.csv')
-target_memory <- read.csv('res/target_memory_data.csv')
 self_report <- read.csv('res/rule_learning_data.csv')
 
 # merging data
 merged_data <- corsi %>%
   inner_join(digit_span, by = "sub") %>%
-  inner_join(target_memory, by = "sub") %>% 
   inner_join(self_report, by = "sub")
 
 

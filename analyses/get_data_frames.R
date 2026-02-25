@@ -214,3 +214,14 @@ gen_error_summary <- gen_error_events %>%
 
 write.csv(gen_error_summary, "res/gen_error_summary.csv", row.names = FALSE)
 
+# get average train times for each group
+train_time <- read.csv("res/train_time.csv")
+
+avg_train_time <- train_time %>% 
+  group_by(train_type) %>% 
+  summarise(train_time_s = mean(train_time)) %>% # in seconds
+  mutate(train_time_min = train_time_s/60) # in minutes
+
+stable_train_time <- train_time %>% 
+  filter(train_type == 'Stable')
+max_time <- max(stable_train_time$train_time)/60 # in minutes

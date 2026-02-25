@@ -35,6 +35,7 @@ all_transfer_data <- read.csv(here("res/all_transfer_data.csv"))
 non_learners <- read.csv(here("res/nonlearners.csv"))
 learn_onset_data <- read.csv(here("res/post_exclusion_transfer_data.csv"))
 
+task_memory_data <- read.csv(here("res/task_memory_summary.csv"))
 ind_diffs <- read.csv(here("res/all_individual_differences.csv"))
 
 ```
@@ -235,6 +236,7 @@ simple_effects <- list('stay_btwn_group' = c(1, -1, 0, 0),
 contrast(gen_error_emm, simple_effects, adjust = "bonferroni")
 
 ```
+
 #### Are the general error rates stable across time?
 To understand the source of general errors in the poor performers, we can compare general errors on switch and stay trials over time between people who are classified as poor performers, the remaining participants in the stable group, and those in the variable group.
 
@@ -476,6 +478,7 @@ entropy_anova <- aov_ez('sub',
 print(entropy_anova)
 
 ```
+
 #### Exploratory Analyses
 It is interesting that there is no difference in transition entropy scores between groups, despite higher task jumps in the variable group compared to the stable group. Is this simply due to the variable group making more clicks and thereby, more 'jumps' on each trial? To assess this, we should check whether there are any difference in the avaerage number of clicks on each trial between groups. 
 
@@ -861,4 +864,314 @@ print(group_effect_set_error)
 
 ```
 
+## Individual Difference Measures
 
+```{r removing dubious performers, echo=FALSE, warning=FALSE}
+
+task_memory_data <- task_memory_data %>% 
+  filter(!sub %in% subs_to_remove)
+
+```
+
+### Target location memory
+```{r task location memory, echo=FALSE, warnings=FALSE}
+data <- task_memory_data
+iv <- task_memory_data$train_type
+x_axis_lab <- 'Group'
+dv <- task_memory_data$mean_locs_correct
+y_axis_lab <- 'mean locations correct'
+these_cols <- wes_palette("AsteroidCity3")[c(1, 4)]
+
+
+task_mem <- ggplot(data = data, 
+                 mapping = aes(x = iv, y = dv, colour = iv, fill = iv)) +
+    geom_half_violin(side = "r", scale = "width", 
+                     width = 0.6,
+                     alpha = 0.3, linewidth = 0.3, 
+                     trim = FALSE) +
+    geom_half_point(side = "l", alpha = 0.5, size = 1.5,
+                    width = 0.6,
+                    position = position_jitter(width = 0.05)) +
+    geom_boxplot(width = 0.1, alpha = 0.9, linewidth = 0.3, colour = "grey20", 
+                 outlier.shape = NA) +
+    # scale_y_continuous(limits = c(0, max(dv)), breaks = seq(0, 4, by = 1)) +
+    scale_fill_manual(values = these_cols) +
+    scale_colour_manual(values = these_cols) +
+    labs(x = x_axis_lab, y = y_axis_lab) + 
+    stat_summary(fun = mean, geom = "point", shape = 23, size = 2, 
+                colour = "grey20", fill = "grey20") +
+    theme_classic(base_size = 16) +
+    theme(
+      legend.position = "none",
+      strip.background = element_rect(fill = "#f0e6da", colour = NA),
+      strip.text = element_text(face = "bold", size = 14),
+      axis.line.x = element_line(color = "grey20", linewidth = 0.5),
+      axis.line.y = element_line(color = "grey20", linewidth = 0.5),
+      axis.ticks = element_line(color = "grey20", linewidth = 0.5),
+      axis.text = element_text(color = "grey20", size = 14),
+      axis.title = element_text(face = 'bold', color = "grey20", size = 16),
+      axis.title.x = element_text(margin = margin(t = 10)),
+      axis.title.y = element_text(margin = margin(r = 10)) 
+    )
+    
+print(task_mem)
+
+
+```
+
+We can compare the number of target locations remembered between groups to determine whether training or transfer interrupted memory of the locations.
+
+```{r ttest task location memory, echo = FALSE, warning = FALSE}
+ttestBF(formula = mean_locs_correct ~ train_type, data = ind_diffs)
+
+```
+
+
+#### Task memory by transfer
+Now, we can also compare the look at whether the proportion of doors remembered each learned task, in terms of whether it was transferred to the complete condition, partial condition, both, or not transferred at all.
+
+```{r task memory wrt. transfer tasks, echo = FALSE, warning = FALSE}
+
+# pivoting the data into long form
+task_memory_by_trf <- task_memory_data %>% 
+  pivot_longer(cols = c(comp_and_part, complete_only, partial_only, never_transferred),
+               names_to = 'transferred_to',
+               values_to = 'proportion_correct') %>% 
+  select(sub, train_type, mean_locs_correct, all_complete, transferred_to, proportion_correct)
+
+```
+
+```{r plot task memory wrt. transfer tasks, echo=FALSE, warning=FALSE}
+
+task_memory_by_trf$transferred_to <- factor(task_memory_by_trf$transferred_to,  # keeps the order of the conditions
+                                            levels = unique(task_memory_by_trf$transferred_to))
+
+# renaming conditions
+levels(task_memory_by_trf$transferred_to) <- c("Both", "Complete Only", "Partial Only", "Never transferred")
+
+# now plot
+x_axis_lab <- 'learned doors by transfer condition'
+y_axis_lab <- 'proportion correct'
+these_cols <- wes_palette("AsteroidCity3")[c(1, 2, 3, 4)]
+jitter_pos <- position_jitterdodge(jitter.width = 0.01) 
+
+plot_memory_by_trf <- ggplot(data = task_memory_by_trf, 
+                mapping = aes(x = transferred_to, y = proportion_correct, colour = transferred_to, fill = transferred_to)) +
+  geom_point(aes(group = sub),
+             alpha = 0.3, 
+             size = 1.5,
+             position = jitter_pos) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 2, 
+               colour = "grey20", fill = "grey20") +
+  stat_summary(fun = mean, geom = "line", 
+               aes(group = 1), 
+               colour = 'grey20', 
+               linewidth = 0.5)+
+  labs(x = x_axis_lab, y = y_axis_lab) +
+  theme_classic(base_size = 16) +
+  scale_fill_manual(values = these_cols) +
+  scale_colour_manual(values = these_cols) +
+  facet_wrap(~ train_type) +
+  theme(
+    legend.position = "none",
+    strip.background = element_rect(fill = "#f0e6da", colour = "NA"),
+    strip.text = element_text(face = "bold", size = 9),
+    axis.line.x = element_line(color = "grey20", linewidth = 0.5),
+    axis.line.y = element_line(color = "grey20", linewidth = 0.5),
+    axis.ticks = element_line(color = "grey20", linewidth = 0.5),
+    axis.text = element_text(color = "grey20", size = 9),
+    axis.title = element_text(face = "bold", color = "grey20", size = 10),
+    axis.title.x = element_text(margin = margin(t = 10)),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.title.y = element_text(margin = margin(r = 10)) 
+  )
+
+print(plot_memory_by_trf)
+
+ggsave(here("res/plots/task_memory_by_trf_excl.png"), plot = plot_memory_by_trf, width = 7, height = 5)
+
+```
+
+
+```{r memory by group x transfered doors, echo=FALSE, warning=FALSE}
+
+memory_means <- task_memory_by_trf %>% 
+  group_by(train_type, transferred_to) %>% 
+  summarise(mean(proportion_correct))
+print(memory_means)
+
+memory_by_trf_anova <- aov_ez('sub',
+                         'proportion_correct', 
+                         task_memory_by_trf, 
+                         between = 'train_type',
+                         within = 'transferred_to')
+
+print(memory_by_trf_anova)
+
+```
+
+We can also split this comparison by whether people received complete before partial, or complete after partial, and when complete transfer came up in the transfer stage.
+
+```{r getting transfer order by complete before or after partial, echo=FALSE, warning=FALSE}
+
+# first, we should get the order that participants performed complete transfer, relative to partial
+# and the position of complete transfer
+order_data <- all_transfer_data %>% 
+  select(sub, train_type, order_id) %>% 
+  mutate(comp_vs_part_order = case_when(order_id %in% c(2, 3, 4) ~ "Complete before Partial",
+                                        order_id %in% c(1, 5, 6)    ~ "Complete after Partial"),
+         complete_pos = case_when(order_id %in% c(3, 4) ~ "1st",
+                                  order_id %in% c(2, 5) ~ "2nd",
+                                  order_id %in% c(1, 6) ~ "3rd")
+         ) %>% 
+  unique()
+
+task_memory_by_trf <- inner_join(task_memory_by_trf, order_data, by = c('sub', 'train_type'))
+
+```
+
+```{r plot task memory by complete position relative to partial, echo=FALSE, warning=FALSE}
+
+# reordering variables
+task_memory_by_trf$comp_vs_part_order <-
+  factor(
+    task_memory_by_trf$comp_vs_part_order,
+    levels = c("Complete before Partial", "Complete after Partial")
+  )
+
+# now plot
+x_axis_lab <- 'learned doors by transfer condition'
+y_axis_lab <- 'proportion correct'
+these_cols <- wes_palette("AsteroidCity3")[c(1, 2, 3, 4)]
+jitter_pos <- position_jitterdodge(jitter.width = 0.01) 
+
+plot_transfer_order <- ggplot(data = task_memory_by_trf, 
+                mapping = aes(x = transferred_to, y = proportion_correct, colour = transferred_to, fill = transferred_to)) +
+  geom_point(aes(group = sub),
+             alpha = 0.3, 
+             size = 1.5,
+             position = jitter_pos) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 2, 
+               colour = "grey20", fill = "grey20") +
+  stat_summary(fun = mean, geom = "line", 
+               aes(group = 1), 
+               colour = 'grey20', 
+               linewidth = 0.5)+
+  labs(x = x_axis_lab, y = y_axis_lab) +
+  theme_classic(base_size = 16) +
+  scale_fill_manual(values = these_cols) +
+  scale_colour_manual(values = these_cols) +
+  facet_wrap(~ comp_vs_part_order) +
+  theme(
+    legend.position = "none",
+    strip.background = element_rect(fill = "#f0e6da", colour = "NA"),
+    strip.text = element_text(face = "bold", size = 9),
+    axis.line.x = element_line(color = "grey20", linewidth = 0.5),
+    axis.line.y = element_line(color = "grey20", linewidth = 0.5),
+    axis.ticks = element_line(color = "grey20", linewidth = 0.5),
+    axis.text = element_text(color = "grey20", size = 9),
+    axis.title = element_text(face = "bold", color = "grey20", size = 10),
+    axis.title.x = element_text(margin = margin(t = 10)),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.title.y = element_text(margin = margin(r = 10)) 
+  )
+
+print(plot_transfer_order)
+
+ggsave(here("res/plots/task_memory_by_trf_order_excl.png"), plot = plot_transfer_order, width = 7, height = 5)
+
+```
+
+```{r memory by order x transfer, echo=FALSE, warning=FALSE}
+
+memory_means <- task_memory_by_trf %>% 
+  group_by(comp_vs_part_order, transferred_to) %>% 
+  summarise(mean(proportion_correct))
+print(memory_means)
+
+memory_orderxtrf_anova <- aov_ez('sub',
+                         'proportion_correct', 
+                         task_memory_by_trf, 
+                         between = 'comp_vs_part_order',
+                         within = 'transferred_to')
+
+print(memory_orderxtrf_anova)
+
+```
+
+#### Is there a recency effect of complete training on memory of the complete task set?
+There are some participants who fail to remember the locations of the task transferred to the complete condition. We want to know whether this is due to a recency effect of performing complete transfer 1st, 2nd or 3rd during the transfer test phase. If there is a recency effect, we should see poorer memory of the complete task in participants who performed complete transfer first and the best memory in those who performed complete transfer 3rd.
+
+```{r getting complete memory data, echo=FALSE, warning=FALSE}
+
+complete_memory <- task_memory_by_trf %>% 
+  select(-transferred_to, -proportion_correct) %>% 
+  group_by(sub, train_type, all_complete, order_id, comp_vs_part_order, complete_pos) %>% 
+  unique()
+
+```
+
+```{r complete recency effect, echo=FALSE, warning=FALSE}
+
+complete_memory$complete_pos <- factor(complete_memory$complete_pos,  # keeps the order of the conditions
+                                            levels = c('1st', '2nd', '3rd'))
+
+# now plot
+x_axis_lab <- 'complete transfer position'
+y_axis_lab <- 'n correct'
+these_cols <- wes_palette("AsteroidCity3")[c(1, 2, 4)]
+jitter_pos <- position_jitterdodge(jitter.width = 0.01) 
+
+complete_recency <- ggplot(data = complete_memory, 
+                mapping = aes(x = complete_pos, y = all_complete, colour = complete_pos, fill = complete_pos)) +
+  geom_point(aes(group = sub),
+             alpha = 0.3, 
+             size = 1.5,
+             position = jitter_pos) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 2, 
+               colour = "grey20", fill = "grey20") +
+  stat_summary(fun = mean, geom = "line", 
+               aes(group = 1), 
+               colour = 'grey20', 
+               linewidth = 0.5)+
+  labs(x = x_axis_lab, y = y_axis_lab) +
+  theme_classic(base_size = 16) +
+  scale_fill_manual(values = these_cols) +
+  scale_colour_manual(values = these_cols) +
+  facet_wrap(~ train_type) +
+  theme(
+    legend.position = "none",
+    strip.background = element_rect(fill = "#f0e6da", colour = "NA"),
+    strip.text = element_text(face = "bold", size = 9),
+    axis.line.x = element_line(color = "grey20", linewidth = 0.5),
+    axis.line.y = element_line(color = "grey20", linewidth = 0.5),
+    axis.ticks = element_line(color = "grey20", linewidth = 0.5),
+    axis.text = element_text(color = "grey20", size = 9),
+    axis.title = element_text(face = "bold", color = "grey20", size = 10),
+    axis.title.x = element_text(margin = margin(t = 10)),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.title.y = element_text(margin = margin(r = 10)) 
+  )
+
+print(complete_recency)
+
+ggsave(here("res/plots/task_memory_recency_excl.png"), plot = complete_recency, width = 7, height = 5)
+
+
+
+```
+```{r complete recency anova, echo=FALSE, warning=FALSE}
+
+memory_means <- complete_memory %>% 
+  group_by(train_type, complete_pos) %>% 
+  summarise(mean(all_complete))
+print(memory_means)
+
+complete_recency_anova <- aov_ez('sub',
+                         'all_complete', 
+                         complete_memory, 
+                         between = c('complete_pos', 'train_type'))
+
+print(complete_recency_anova)
+
+```

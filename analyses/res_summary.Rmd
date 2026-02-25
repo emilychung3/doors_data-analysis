@@ -1,14 +1,14 @@
 ---
-title: "doors results summary"
+title: "Stable Task Contexts on the Formation of Routines and Learning Transfer"
 author: "E. Chung"
 output: html_document
 date: "2026-01-07"
 ---
-# Document Summary
+# Document Summary {.tabset .tabset-dropdown}
 
 This document contains the plots and analyses for all measures used to assess performance in the doors experiment. Planned analyses are conducted for the training and transfer phase as outlined in the pregistration document for this study *[INSERT LINK HERE]*.
 
-```{r setup, include=FALSE}
+```{r libraries, include=FALSE}
 # load libraries 
 library(here) # setting working directory to the project directory
 library(tidyverse)
@@ -22,6 +22,10 @@ library(afex) # libraries for performing planned contrast analyses
 library(emmeans)
 library(BayesFactor)
 afex_options(emmeans_model = "multivariate")
+
+```
+
+```{r dataframes, include=FALSE}
 
 # load dataframes
 training_data <- read.csv(here("res/training_jumps_gen-error.csv"))
@@ -37,7 +41,7 @@ all_btwn_transfer_data <- read.csv(here("res/all_btwn_transfer_data.csv"))
 btwn_non_learners <- read.csv(here("res/btwn_nonlearners.csv"))
 learn_onset_btwn_data <- read.csv(here("res/post_exclusion_btwn_data.csv"))
 
-
+task_memory_data <- read.csv(here("res/task_memory_summary.csv"))
 ind_diffs <- read.csv(here("res/all_individual_differences.csv"))
 
 ```
@@ -45,15 +49,16 @@ ind_diffs <- read.csv(here("res/all_individual_differences.csv"))
 ## Training Stage
 
 Three key measures are used to assess performance in the Training Stage:
-- Task jumps 
-- Transition entropy
-- General Errors
+
+- **Task jumps**
+- **Transition entropy**
+- **General Errors**
 
 ### Task Jumps
 
 Task Jumps measure the extent to which training causes a mixing of door selections from Task A and B during pursuit of a single target. ‘Task jumps’ record the number of transitions between target locations from task-set A and B per trial. For example, a sequence of four door selections following the pattern of A1-B1-B2-A2 would incur a score of 2. This is due to the switch from task-set A to B on the second door selection, which is followed by a subsequent switch back to Task A on the fourth selection. Transitions to doors which are not relevant to any task are not recorded in this measure, however we do record irrelevant door selections to confirm whether they occur at a rate that is lower than would be expected by chance
 
-```{r task jumps, echo=FALSE, warning=FALSE}
+```{r task jumps, echo=FALSE, warning=FALSE, fig.show='hold', out.width="49%"}
 data <- training_data
 iv <- training_data$switch
 x_axis_lab <- 'Trial type'
@@ -107,7 +112,7 @@ We will perform a 2 (Group: stable vs. variable) x 2 (Trial Type: stay vs. switc
 
 Before that, we should check if the data meets the assumptions for homogeneity of variance and normality, by checking if the variance ratio exceed 1.5. The variance ratio is the ratio between the largest and smallest variance values across conditions. We should also check for outliers, which are classified as scored greater than 2.5 SDs from the mean for each grou x trial type condition. The following output shows a summary of the descriptive statistics and number of outliers from each condition.
 
-```{r variance on task jump conditions, echo=FALSE, warning=FALSE, fig.show="hold"}
+```{r variance on task jump conditions, echo=FALSE, warning=FALSE}
 # getting mean, variance and standard deviation for each condition
 var_summary <- training_data %>% 
   group_by(train_type, switch) %>% 
@@ -188,7 +193,7 @@ training_post_excl <- training_with_descriptives %>%
 
 ```
 
-```{r task jumps outlier cut offs, echo=FALSE, warning=FALSE, fig.show='hold', out.width="50%"}
+```{r task jumps outlier cut offs, echo=FALSE, warning=FALSE, fig.show='hold', out.width="49%"}
 
  # plotting the full training data with dotted lines showing the cutoffs
 # data <- training_data
@@ -238,7 +243,7 @@ print(task_jumps_cutoffs)
 
 This plot shows task jumps after outliers are removed. The scale for this plot is smaller.
 
-```{r task jumps post excl, echo=FALSE, warning=FALSE}
+```{r task jumps post excl, echo=FALSE, warning=FALSE, fig.show='hold', out.width="49%"}
 # now plotting the task jumps data after outliers have been excluded
 # data <- training_post_excl
 iv <- training_post_excl$switch
@@ -330,7 +335,7 @@ contrast(jumps_emm_postexcl, simple_effects, adjust = "bonferroni")
 Transition entropy quantifies the average variance in participants’ transitions between doors for a given task. First, for each door (or state, [s]) we compute the probability of a transition to the next door (or state, [s’]). We then compute the entropy over the vector of transition probabilities (s -> all s’) and then sum the entropies across all states (Σ(H(s)). This measure quantifies the degree to which a participants’ behaviour during training deviates from being perfectly predictable. Transition entropy during training is averaged across Task A and B. Higher routine variability scores indicate greater variability in search paths during the training stage, and less routine behaviour. 
 
 The following plot and analysis is performed with transition entropy across all trials (switch and stay).
-```{r transition entropy, echo = FALSE, warning=FALSE}
+```{r transition entropy, echo = FALSE, warning=FALSE, fig.show='hold', out.width="49%"}
 data <- training_entropy
 iv <- training_entropy$train_type
 x_axis_lab <- 'Group'
@@ -397,7 +402,7 @@ A between groups comparison will be performed to determine any differences in tr
 
 *No difference is detected between groups on transition entropy*
 
-```{r transition entropy stay, echo = FALSE, warning=FALSE}
+```{r transition entropy stay, echo = FALSE, warning=FALSE, fig.show='hold', out.width="49%"}
 data <- training_entropy_stay
 iv <- training_entropy_stay$train_type
 x_axis_lab <- 'Group'
@@ -457,7 +462,7 @@ print(entropy_stay_anova)
 
 Why is there a difference in task jumps but no difference between transition entropy between groups? Higher task jumps in the variable group may be due to a greater number of clicks in general. To look at this, we can compare the avaerage number of clicks made by the stable and variable groups across all trials.
 
-```{r nclicks, echo=FALSE, warning=FALSE}
+```{r nclicks, echo=FALSE, warning=FALSE, fig.show='hold', out.width="49%"}
 
 nclicks <- read.csv(here("res/training_nclicks.csv"))
   
@@ -508,7 +513,7 @@ ggsave(here("res/plots/nclicks.png"), plot = nclicks_btwn, width = 7, height = 5
 
 Is there a subset of people in the stable group who are lost/confused and driving the bimodaility in transition entropy on stay trials? And is this contributing to a higher task jumps and general error scores? We can see if if we plot transition entropy (TE) against task jumps and general errors (see below).
 
-```{r TE subset, echo-FALSE, warning=FALSE}
+```{r TE subset, echo=FALSE, warning=FALSE}
 # first, we should find the subset of participants who fall within the clusters of interest
 
 # getting participants who score > 20 on TE for Stay trials only
@@ -527,7 +532,7 @@ training_subset <- training_entropy %>%
 
 ```
 
-```{r TE and task jumps, echo=FALSE, warning=FALSE} 
+```{r TE and task jumps, echo=FALSE, warning=FALSE, fig.show='hold', out.width="49%"} 
 # plotting task jumps on stay trials with mean entropy across all trials
 training_stay_only <- training_data %>% 
   filter(switch == 'Stay')
@@ -583,7 +588,7 @@ A General Error is made when a door which belongs to neither Task A nor B is sel
 
 Participants who have an average general error greater than 0.25 on *stay* trials during training will be excluded from analyses of the test phase. No subjects met this criteria, and thus, no participants will be excluded from analyses of transfer phase.
 
-```{r general errors, echo = FALSE, warning=FALSE}
+```{r general errors, echo = FALSE, warning=FALSE, fig.show='hold', out.width="49%"}
 data <- training_data
 iv <- training_data$switch
 x_axis_lab <- 'Trial type'
@@ -631,7 +636,7 @@ ggsave(here("res/plots/general_errors.png"), plot = gen_errors, width = 7, heigh
 
 The following plot shows the distribution of all general error scores, collapsed across group and trial type.
 
-```{r general errors histogram, echo = FALSE, warning=FALSE}
+```{r general errors histogram, echo = FALSE, warning=FALSE, fig.show='hold', out.width="49%"}
 
 gen_err_hist <- ggplot(data = training_data, aes(x = mean_gen_error)) +
   geom_histogram(fill = 'orange', bins = 30) +
@@ -736,7 +741,7 @@ training_post_excl <- training_with_descriptives %>%
 ```
 
 
-```{r general errors with outlier cutoffs, echo = FALSE, warning=FALSE}
+```{r general errors with outlier cutoffs, echo = FALSE, warning=FALSE, fig.show='hold', out.width="49%"}
 data <- training_data
 iv <- training_data$switch
 x_axis_lab <- 'Trial type'
@@ -785,7 +790,7 @@ print(gen_errors)
 
 This plot shows the distribution of the data after excluding outliers.
 
-```{r general errors post exclusion, echo = FALSE, warning=FALSE}
+```{r general errors post exclusion, echo = FALSE, warning=FALSE, fig.show='hold', out.width="49%"}
 data <- training_post_excl
 iv <- training_post_excl$switch
 x_axis_lab <- 'Trial type'
@@ -867,7 +872,7 @@ contrast(gen_error_emm, simple_effects, adjust = "bonferroni")
 #### Poor performers?
 Now, we should check if the same subset of participants who scored > 20 on transition entropy is accounting for the higher general error scores in the stable group. To do this, we can correlate transition entropy with general errors.
 
-```{r TE and general error, echo=FALSE, warning=FALSE} 
+```{r TE and general error, echo=FALSE, warning=FALSE, fig.show='hold', out.width='49%'} 
 # plotting task jumps on stay trials with mean entropy across all trials
 
 TE_gen_error_stay <- ggplot(data = training_stay_only, 
@@ -909,20 +914,29 @@ ggsave(here("res/plots/TExswitch-gen-error.png"), plot = TE_gen_error_switch,
 
 ```
 
+## Training Summary
+
+We were able to replicate findings for task jumps as shown in Barnes et al., (submitted). We found that variable training caused people to preemptively shift between door selections from each house (i.e., mix door selections from the two task sets), while stable training helped keep door selections from task distinct. The mixing of the two task sets in the variable group did not disrupt how routine people were, when searching for targets, because we found no difference in transition entropy between groups, when across task and trial. This is in contrast to previous finding which suggested that variable training significantly interfered with the ability to maintain a consistent routine compared to stable training. The lack of difference between groups for transition entropy may be due to the introduction of a trial-based structure, through the home button added to the display, driving the transition entropy scores down to a level comparable to the stable group. This may suggest that the presence of external factors which signal the start and end of a task are crucial to being able to maintain a routine. This also suggests that what forms part of a task representation is influence by external cues.
+
+In addition, we detected a significant interaction between group and trial type for general errors, which we did not observe in the previous study. This was driven by greater general errors on switch trials compared to stay trials for those in the stable group. 
+
+To investigate the source of this difference we identified 5 participants with an average general error > 0.25 and run all the analyses again (post-hoc) to determine whether these participants was contributing to the interaction effect seen in for general errors in this study. The interaction remained significant after removing these participants. Note: these analyses were run in a separate res_summary_posthoc_excl.Rmd document.
+
 
 ## Transfer Test Stage
 
 Three key measures are used to assess performance during the Transfer Test Stage of the experiment.
-* Accuracy
-* Learning Onset
-* Setting Error
+
+- **Accuracy**
+- **Learning Onset**
+- **Setting Error**
 
 
 ### Accuracy
 
 Accuracy is a measure of performance in the transfer task. It is the proportion of door selections which are relevant to the current task, relative to the total number of door selections. Accuracy is averaged across trials for each participant. 
 
-```{r accuracy, echo = FALSE, warning=FALSE}
+```{r accuracy, echo=FALSE, warning=FALSE, fig.show='hold', out.width="49%"}
 
 # specifying the order that I want my transfer conditions to appear
 all_transfer_data$transfer <- factor(
@@ -987,9 +1001,10 @@ ggsave(here("res/plots/accuracy_full.png"), plot = accuracy,
 
 #### Planned Analyses
 Planned bonferroni contrasts are performed for the following comparisons.
-* main effect of training - 1. stable v.s. variable training
-* main effects of transfer - 1. novel v.s. partial, 2. novel v.s. complete, 3. partial v.s. complete
-* interaction effects - 1. group x transfer (novel vs. partial) and 2. group x transfer (partial vs. complete)
+
+- main effect of training - 1. stable v.s. variable training
+- main effects of transfer - 1. novel v.s. partial, 2. novel v.s. complete, 3. partial v.s. complete
+- interaction effects - 1. group x transfer (novel vs. partial) and 2. group x transfer (partial vs. complete)
 
 *Only the main effect of novel vs. complete transfer returned significant. Difference between novel and part almost returns significant*
 
@@ -1036,7 +1051,7 @@ print(interactions_acc)
 
 To remove mitigate any order effects, accuracy can be assessed using a between subjects design, by comparing performance on the first transfer condition across groups. This however, significantly reduces power.
 
-```{r accuracy between subjects, echo=FALSE, warning=FALSE}
+```{r accuracy between subjects, echo=FALSE, warning=FALSE, fig.show='hold', out.width="49%"}
 
 # specifying the order that I want my transfer conditions to appear
 # all_btwn_transfer_data$transfer <- factor(
@@ -1097,7 +1112,7 @@ To determine whether the strength of a routine correlated with performance in tr
 
 To do this, we will first check whether the data for transition entropy and the bias scores is skewed.
 
-```{r bias and TE skewness, echo = FALSE, warning = FALSE}
+```{r bias and TE skewness, echo = FALSE, warning = FALSE, fig.show='hold', out.width="49%"}
 
 bias_scores <- read.csv(here("res/transfer_bias_scores.csv"))
 
@@ -1170,7 +1185,7 @@ bias_scores <- bias_scores %>%
 
 Now, lets visualise the transformed data in Q-Q plots again.
 
-```{r Q-Q plots post transformation, echo = FALSE, warnings = FALSE}
+```{r Q-Q plots post transformation, echo = FALSE, warnings = FALSE, fig.show='hold', out.width="49%"}
 
 # Q-Q plots
 qq_TE_transformed <- ggplot(data = bias_scores, aes(sample = log_entropy)) + 
@@ -1235,7 +1250,7 @@ Criteria for coding evidence of doors for learning onset are as follows:
 E.g., for a door sequence of door selections ‘A-B-X-Y-C', doors A and B are assigned a value of 1, door C is assigned 0. Door D which is missing from the sequence of clicks is assigned 1, if it was correctly selected before an error on the last trial a click on Door D was recorded, and NA if else. 
 
 
-```{r learning onset, echo = FALSE, warning=FALSE}
+```{r learning onset, echo = FALSE, warning=FALSE, fig.show='hold', out.width="49%"}
 
 # specifying the order that I want my transfer conditions to appear
 learn_onset_data$transfer <- factor(
@@ -1305,7 +1320,7 @@ print(non_learners)
 Again, we can look at the learning onset data in a between subjects manner.
 
 
-```{r between learning onset, echo = FALSE, warning=FALSE}
+```{r between learning onset, echo = FALSE, warning=FALSE, fig.show='hold', out.width="49%"}
 data <- learn_onset_btwn_data
 iv <- learn_onset_btwn_data$transfer
 x_axis_lab <- 'Transfer type'
@@ -1409,7 +1424,7 @@ print(interactions_learn_onset)
 
 This measure tells us whether participants are following a strategy of using 1, 2, 3, or 4 target locations on the last trial of each transfer condition (i.e., by the end of that transfer condition).
 
-```{r ndoors learned, echo = FALSE, warning=FALSE}
+```{r ndoors learned, echo = FALSE, warning=FALSE, fig.show='hold', out.width="49%"}
 
 # specifying the order that I want my transfer conditions to appear
 all_transfer_data$transfer <- factor(
@@ -1519,7 +1534,7 @@ For partial and complete transfer, setting-error is calculated as the proportion
 
 For the novel task condition, setting-error will be calculated as the proportion of door selections from Task A and B. 
 
-```{r setting errors, echo=FALSE, warning=FALSE}
+```{r setting errors, echo=FALSE, warning=FALSE, fig.show='hold', out.width="49%"}
 
 # specifying the order I want transfer conditions to appear in
 all_transfer_data$transfer <- factor(
@@ -1620,7 +1635,7 @@ print(group_effect_set_error)
 
 Again, we can look at Setting Errors using as between subjects design again.
 
-```{r setting error between subjects, echo=FALSE, warning=FALSE}
+```{r setting error between subjects, echo=FALSE, warning=FALSE, fig.show='hold', out.width="49%"}
 data <- all_btwn_transfer_data
 iv <- all_btwn_transfer_data$transfer
 x_axis_lab <- 'Transfer type'
@@ -1666,20 +1681,29 @@ print(set_error_between_subs) # same order issue as above
 
 ```
 
+## Transfer Summary
+We did not find any effect of training in stable task contexts on transfer performance. This suggests that the introduction of a trial based search may have mitigated (/prevented) against decrements (/benefits) to partial transfer seen in the stable (/variable) when a continuous search was used, by enforcing a clear start and end point, rather than the amount of task mixing(/interference) experienced during training. The extent that stable contexts and task mixing (/interference) influences transfer may play a role when there is not a clear start an end point to a routine. This contradicts previous findings that being less routine allows people to adapt to novel tasks better.
 
-## Individual Difference Measures
+Does this also suggest that having a routine with a fixed start and end point allows us to **better compartmentalise component behaviour** and perform to transfer in a flexible manner by virture of being able to track component steps better? I.e., have we made the variable more routine, but also better at dissociating between component bethaviours better?  
+
+Is it both? **1 - being able to compartmentalise tasks into components**, but  **2 - not chain these into a single string of events i.e., create associations within the components of the task**. How can we look at this?
+
+In addition, participants once again performed at ceiling, which suggests that our transfer conditions were not sufficiently difficult to tease apart performance on each condition this may have also contributed to the lack of an ability to observe differences in performance. Future work could consider increasing the difficulty of the transfer tasks to better draw out differences between the types of transfer. For example, we could increase the number of target locations from 4 to 6. 
+
+
+## Task Memory
 
 ### Target location memory
-```{r target location memory, echo=FALSE, warnings=FALSE}
-data <- ind_diffs
-iv <- ind_diffs$train_type
+```{r task location memory, echo=FALSE, warnings=FALSE, fig.show='hold', out.width="49%"}
+data <- task_memory_data
+iv <- task_memory_data$train_type
 x_axis_lab <- 'Group'
-dv <- ind_diffs$mean_locs_correct
+dv <- task_memory_data$mean_locs_correct
 y_axis_lab <- 'mean locations correct'
 these_cols <- wes_palette("AsteroidCity3")[c(1, 4)]
 
 
-target_mem <- ggplot(data = data, 
+task_mem <- ggplot(data = data, 
                  mapping = aes(x = iv, y = dv, colour = iv, fill = iv)) +
     geom_half_violin(side = "r", scale = "width", 
                      width = 0.6,
@@ -1690,7 +1714,7 @@ target_mem <- ggplot(data = data,
                     position = position_jitter(width = 0.05)) +
     geom_boxplot(width = 0.1, alpha = 0.9, linewidth = 0.3, colour = "grey20", 
                  outlier.shape = NA) +
-    scale_y_continuous(limits = c(0, max(dv)), breaks = seq(0, 4, by = 1)) +
+    # scale_y_continuous(limits = c(0, max(dv)), breaks = seq(0, 4, by = 1)) +
     scale_fill_manual(values = these_cols) +
     scale_colour_manual(values = these_cols) +
     labs(x = x_axis_lab, y = y_axis_lab) + 
@@ -1710,25 +1734,423 @@ target_mem <- ggplot(data = data,
       axis.title.y = element_text(margin = margin(r = 10)) 
     )
     
-print(target_mem)
+print(task_mem)
 
 
 ```
 
-#### Exploratory analyses
 We can compare the number of target locations remembered between groups to determine whether training or transfer interrupted memory of the locations.
 
-```{r}
+```{r ttest task location memory, echo = FALSE, warning = FALSE}
 ttestBF(formula = mean_locs_correct ~ train_type, data = ind_diffs)
 
 ```
 
 
-## Additional Analyses
+#### Task memory by transfer
+Now, we can also compare the look at whether the proportion of doors remembered each learned task, in terms of whether it was transferred to the complete condition, partial condition, both, or not transferred at all.
+
+```{r task memory wrt. transfer tasks, echo = FALSE, warning = FALSE}
+
+# pivoting the data into long form
+task_memory_by_trf <- task_memory_data %>% 
+  pivot_longer(cols = c(comp_and_part, complete_only, partial_only, never_transferred),
+               names_to = 'transferred_to',
+               values_to = 'proportion_correct') %>% 
+  select(sub, train_type, mean_locs_correct, all_complete, transferred_to, proportion_correct)
+
+```
+
+```{r plot task memory wrt. transfer tasks, echo=FALSE, warning=FALSE, fig.show='hold', out.width="49%"}
+
+task_memory_by_trf$transferred_to <- factor(task_memory_by_trf$transferred_to,  # keeps the order of the conditions
+                                            levels = unique(task_memory_by_trf$transferred_to))
+
+# renaming conditions
+levels(task_memory_by_trf$transferred_to) <- c("Both", "Complete Only", "Partial Only", "Never transferred")
+
+# now plot
+x_axis_lab <- 'learned doors by transfer condition'
+y_axis_lab <- 'proportion correct'
+these_cols <- wes_palette("AsteroidCity3")[c(1, 2, 3, 4)]
+jitter_pos <- position_jitterdodge(jitter.width = 0.01) 
+
+plot_memory_by_trf <- ggplot(data = task_memory_by_trf, 
+                mapping = aes(x = transferred_to, y = proportion_correct, colour = transferred_to, fill = transferred_to)) +
+  geom_point(aes(group = sub),
+             alpha = 0.3, 
+             size = 1.5,
+             position = jitter_pos) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 2, 
+               colour = "grey20", fill = "grey20") +
+  stat_summary(fun = mean, geom = "line", 
+               aes(group = 1), 
+               colour = 'grey20', 
+               linewidth = 0.5)+
+  labs(x = x_axis_lab, y = y_axis_lab) +
+  theme_classic(base_size = 16) +
+  scale_fill_manual(values = these_cols) +
+  scale_colour_manual(values = these_cols) +
+  facet_wrap(~ train_type) +
+  theme(
+    legend.position = "none",
+    strip.background = element_rect(fill = "#f0e6da", colour = "NA"),
+    strip.text = element_text(face = "bold", size = 9),
+    axis.line.x = element_line(color = "grey20", linewidth = 0.5),
+    axis.line.y = element_line(color = "grey20", linewidth = 0.5),
+    axis.ticks = element_line(color = "grey20", linewidth = 0.5),
+    axis.text = element_text(color = "grey20", size = 9),
+    axis.title = element_text(face = "bold", color = "grey20", size = 10),
+    axis.title.x = element_text(margin = margin(t = 10)),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.title.y = element_text(margin = margin(r = 10)) 
+  )
+
+print(plot_memory_by_trf)
+
+ggsave(here("res/plots/task_memory_by_trf.png"), plot = plot_memory_by_trf, width = 7, height = 5)
+
+```
+
+
+```{r memory by groupxtransferred doors, echo-FALSE, warning=FALSE}
+
+memory_means <- task_memory_by_trf %>% 
+  group_by(train_type, transferred_to) %>% 
+  summarise(mean(proportion_correct))
+print(memory_means)
+
+memory_by_trf_anova <- aov_ez('sub',
+                         'proportion_correct', 
+                         task_memory_by_trf, 
+                         between = 'train_type',
+                         within = 'transferred_to')
+
+print(memory_by_trf_anova)
+
+```
+
+We can also split this comparison by whether people received complete before partial, or complete after partial, and when complete transfer came up in the transfer stage.
+
+```{r getting transfer order by complete before or after partial, echo=FALSE, warning=FALSE}
+
+# first, we should get the order that participants performed complete transfer, relative to partial
+# and the position of complete transfer
+order_data <- all_transfer_data %>% 
+  select(sub, train_type, order_id) %>% 
+  mutate(comp_vs_part_order = case_when(order_id %in% c(2, 3, 4) ~ "Complete before Partial",
+                                        order_id %in% c(1, 5, 6)    ~ "Complete after Partial"),
+         complete_pos = case_when(order_id %in% c(3, 4) ~ "1st",
+                                  order_id %in% c(2, 5) ~ "2nd",
+                                  order_id %in% c(1, 6) ~ "3rd")) %>% 
+  unique()
+
+task_memory_by_trf <- inner_join(task_memory_by_trf, order_data, by = c('sub', 'train_type'))
+
+```
+
+```{r plot task memory by complete position relative to partial, echo=FALSE, warning=FALSE, fig.show='hold', out.width="49%"}
+
+# reordering variables
+task_memory_by_trf$comp_vs_part_order <- factor(task_memory_by_trf$comp_vs_part_order,
+                                                levels = c("Complete before Partial", "Complete after Partial"))
+
+# now plot
+x_axis_lab <- 'learned doors by transfer condition'
+y_axis_lab <- 'proportion correct'
+these_cols <- wes_palette("AsteroidCity3")[c(1, 2, 3, 4)]
+jitter_pos <- position_jitterdodge(jitter.width = 0.01) 
+
+plot_transfer_order <- ggplot(data = task_memory_by_trf, 
+                mapping = aes(x = transferred_to, y = proportion_correct, colour = transferred_to, fill = transferred_to)) +
+  geom_point(aes(group = sub),
+             alpha = 0.3, 
+             size = 1.5,
+             position = jitter_pos) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 2, 
+               colour = "grey20", fill = "grey20") +
+  stat_summary(fun = mean, geom = "line", 
+               aes(group = 1), 
+               colour = 'grey20', 
+               linewidth = 0.5)+
+  labs(x = x_axis_lab, y = y_axis_lab) +
+  theme_classic(base_size = 16) +
+  scale_fill_manual(values = these_cols) +
+  scale_colour_manual(values = these_cols) +
+  facet_wrap(~ comp_vs_part_order) +
+  theme(
+    legend.position = "none",
+    strip.background = element_rect(fill = "#f0e6da", colour = "NA"),
+    strip.text = element_text(face = "bold", size = 9),
+    axis.line.x = element_line(color = "grey20", linewidth = 0.5),
+    axis.line.y = element_line(color = "grey20", linewidth = 0.5),
+    axis.ticks = element_line(color = "grey20", linewidth = 0.5),
+    axis.text = element_text(color = "grey20", size = 9),
+    axis.title = element_text(face = "bold", color = "grey20", size = 10),
+    axis.title.x = element_text(margin = margin(t = 10)),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.title.y = element_text(margin = margin(r = 10)) 
+  )
+
+print(plot_transfer_order)
+
+ggsave(here("res/plots/task_memory_by_trf_order.png"), plot = plot_transfer_order, width = 7, height = 5)
+
+```
+
+```{r memory by order x transfer, echo=FALSE, warning=FALSE}
+
+memory_means <- task_memory_by_trf %>% 
+  group_by(comp_vs_part_order, transferred_to) %>% 
+  summarise(mean(proportion_correct))
+print(memory_means)
+
+memory_orderxtrf_anova <- aov_ez('sub',
+                         'proportion_correct', 
+                         task_memory_by_trf, 
+                         between = 'comp_vs_part_order',
+                         within = 'transferred_to')
+
+print(memory_orderxtrf_anova)
+
+```
+
+#### Is there a recency effect of complete training on memory of the complete task set?
+There are some participants who fail to remember the locations of the task transferred to the complete condition. We want to know whether this is due to a recency effect of performing complete transfer 1st, 2nd or 3rd during the transfer test phase. If there is a recency effect, we should see poorer memory of the complete task in participants who performed complete transfer first and the best memory in those who performed complete transfer 3rd.
+
+```{r getting complete memory data, echo=FALSE, warning=FALSE}
+
+complete_memory <- task_memory_by_trf %>% 
+  select(-transferred_to, -proportion_correct) %>% 
+  group_by(sub, train_type, all_complete, order_id, comp_vs_part_order, complete_pos) %>% 
+  unique()
+
+```
+
+```{r complete recency effect, echo=FALSE, warning=FALSE, fig.show='hold', out.width="49%"}
+
+complete_memory$complete_pos <- factor(complete_memory$complete_pos,  # keeps the order of the conditions
+                                            levels = c('1st', '2nd', '3rd'))
+
+# now plot
+x_axis_lab <- 'complete transfer position'
+y_axis_lab <- 'n correct'
+these_cols <- wes_palette("AsteroidCity3")[c(1, 2, 4)]
+jitter_pos <- position_jitterdodge(jitter.width = 0.01) 
+
+complete_recency <- ggplot(data = complete_memory, 
+                mapping = aes(x = complete_pos, y = all_complete, colour = complete_pos, fill = complete_pos)) +
+  geom_point(aes(group = sub),
+             alpha = 0.3, 
+             size = 1.5,
+             position = jitter_pos) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 2, 
+               colour = "grey20", fill = "grey20") +
+  stat_summary(fun = mean, geom = "line", 
+               aes(group = 1), 
+               colour = 'grey20', 
+               linewidth = 0.5)+
+  labs(x = x_axis_lab, y = y_axis_lab) +
+  theme_classic(base_size = 16) +
+  scale_fill_manual(values = these_cols) +
+  scale_colour_manual(values = these_cols) +
+  facet_wrap(~ train_type) +
+  theme(
+    legend.position = "none",
+    strip.background = element_rect(fill = "#f0e6da", colour = "NA"),
+    strip.text = element_text(face = "bold", size = 9),
+    axis.line.x = element_line(color = "grey20", linewidth = 0.5),
+    axis.line.y = element_line(color = "grey20", linewidth = 0.5),
+    axis.ticks = element_line(color = "grey20", linewidth = 0.5),
+    axis.text = element_text(color = "grey20", size = 9),
+    axis.title = element_text(face = "bold", color = "grey20", size = 10),
+    axis.title.x = element_text(margin = margin(t = 10)),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.title.y = element_text(margin = margin(r = 10)) 
+  )
+
+print(complete_recency)
+
+ggsave(here("res/plots/task_memory_recency.png"), plot = complete_recency, width = 7, height = 5)
+
+
+
+```
+
+```{r complete recency anova, echo=FALSE, warning=FALSE}
+
+memory_means <- complete_memory %>% 
+  group_by(train_type, complete_pos) %>% 
+  summarise(mean(all_complete))
+print(memory_means)
+
+complete_recency_anova <- aov_ez('sub',
+                         'all_complete', 
+                         complete_memory, 
+                         between = c('complete_pos', 'train_type'))
+
+print(complete_recency_anova)
+
+```
+
+
+#### Task memory by error type
+We can also get the proportion of setting setting errors participants are making for each group.
+
+```{r task memory proportion set errors, echo = FALSE, warning = FALSE}
+
+# pivoting the data into long form
+memory_errors <- task_memory_data %>% 
+  pivot_longer(cols = c(proportion_setErr1, proportion_setErr2, proportion_genErr1, 
+                        proportion_genErr2),
+               names_to = 'error_type',
+               values_to = 'proportion_errors') %>% 
+  select(sub, train_type, mean_locs_correct, error_type, proportion_errors)
+
+error <- rep(c('SetErr', 'SetErr', 'GenErr', 'GenErr'), times = 96)
+learned_task <- rep(c("A", "B", "A", "B"), times = 96)
+
+memory_errors$error_type <- as.factor(memory_errors$error_type)
+levels(memory_errors$error_type) <- c("GenErrorA", "GenErrorB", "SetErrorA", "SetErrorB")
+memory_errors <- cbind(memory_errors, learned_task, error)
+
+
+```
+
+```{r task memory errors, echo=FALSE, warning=FALSE, fig.show='hold', out.width="49%"}
+
+# plotting errors for each sub, and each learned task they made an error on
+x_axis_lab <- 'error type'
+y_axis_lab <- 'proportion of total errors'
+these_cols <- wes_palette("AsteroidCity3")[c(1, 4)]
+jitter_pos <- position_jitterdodge(jitter.width = 0.01) 
+
+plot_memory_errors <- ggplot(data = memory_errors, 
+                mapping = aes(x = error, y = proportion_errors, colour = error, fill = error)) +
+  geom_point(aes(group = sub),
+             alpha = 0.3, 
+             size = 1.5,
+             position = jitter_pos) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 2, 
+               colour = "grey20", fill = "grey20") +
+  stat_summary(fun = mean, geom = "line", 
+               aes(group = 1), 
+               colour = 'grey20', 
+               linewidth = 0.5)+
+  labs(x = x_axis_lab, y = y_axis_lab) +
+  theme_classic(base_size = 16) +
+  scale_fill_manual(values = these_cols) +
+  scale_colour_manual(values = these_cols) +
+  facet_wrap(~ train_type) +
+  theme(
+    legend.position = "none",
+    strip.background = element_rect(fill = "#f0e6da", colour = "NA"),
+    strip.text = element_text(face = "bold", size = 9),
+    axis.line.x = element_line(color = "grey20", linewidth = 0.5),
+    axis.line.y = element_line(color = "grey20", linewidth = 0.5),
+    axis.ticks = element_line(color = "grey20", linewidth = 0.5),
+    axis.text = element_text(color = "grey20", size = 9),
+    axis.title = element_text(face = "bold", color = "grey20", size = 10),
+    axis.title.x = element_text(margin = margin(t = 10)),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.title.y = element_text(margin = margin(r = 10)) 
+  )
+
+print(plot_memory_errors)
+
+```
+
+Is there an interaction between error type and train type on task memory?
+
+```{r task memory errors anova, echo=FALSE, warning=FALSE}
+
+# means for each condition
+memory_errors_summ <- memory_errors %>% 
+  filter(!is.na(proportion_errors)) %>% 
+  group_by(train_type, error) %>% 
+  summarise(n = n(),
+            error_proportion = mean(proportion_errors)) 
+
+# fit the data to an ANOVA model
+memory_error_anova <- aov_ez('sub',
+                         'proportion_errors', 
+                         memory_errors, 
+                         between = 'train_type',
+                         within = 'error')
+
+print(memory_error_anova)
+
+```
+
+## Task Memory Summary
+We compared memory for the two learned task sets and found no differences between groups. This suggests that the training manipulation did not affect participants meory of the two task sets. Memory was also not affected by the order of conditions during the transfer test stage. That is performing complete transfer before partial transfer did not affect memory of doors to a different extent than if complete was performed after partial transfer. There was also no recency effect of performing complete 1st, 2nd or 3rd in memory of the relevant target locations.
+
+Does this suggest that both groups were equally able to distinguish the two task sets? i.e., did we sucessfully manipulate task representations using training?
+
+## Other individual differences
+To determine whether its worthwhile performing the individual difference data analyses, we can look at the variance in the data for those measures
+
+### Spatial WM (corsi)
+Here, I am visualising the spread of the data for the forward and backward version of the corsi task.
+
+```{r spatial WM, echo=FALSE}
+
+x <- ind_diffs$max_fwd_corsi[is.finite(ind_diffs$max_fwd_corsi)]
+y <- ind_diffs$max_bwd_corsi[is.finite(ind_diffs$max_bwd_corsi)]
+
+hist(x,
+     main = "forward spatial WM",
+     xlab = "maximum recalled",
+     col = "lightblue")
+hist(y,
+     main = "backwards spatial WM",
+     xlab = "maximum recalled",
+     col = "lightblue")
+
+spatialWM_desc <- ind_diffs %>% 
+  summarise(fwd_mean = mean(x),
+            bwd_mean = mean(y),
+            fwd_var = var(x),
+            bwd_var = var(y))
+
+```
+
+### Verbal WM (digit span)
+Here, I am visualising the spread of the data
+
+```{r spatial WM, echo=FALSE}
+
+x <- ind_diffs$max_fw_digits
+y <- ind_diffs$max_bw_digits
+
+hist(x,
+     main = "forward verbal WM",
+     xlab = "digit span",
+     col = "lightblue")
+hist(y,
+     main = "backwards spatial WM",
+     xlab = "digit span",
+     col = "lightblue")
+
+plot(x, y,
+     xlab = "forward digit span",
+     ylab = "backwards digit span",
+     pch = 19,        
+     col = "blue")
+
+verbalWM_desc <- ind_diffs %>% 
+  summarise(fwd_mean = mean(max_fw_digits),
+            bwd_mean = mean(max_bw_digits),
+            fwd_var = var(max_fw_digits),
+            bwd_var = var(max_bw_digits))
+
+```
+
+## Exploratory analyses
 ### Task jumps over time 
 We can also look at task jumps overtime.
 
-```{r task jumps by epoch, echo=FALSE, warning=FALSE}
+```{r task jumps by epoch, echo=FALSE, warning=FALSE, fig.show='hold', out.width="49%"}
 
 jumps_by_epoch <- ggplot(training_by_epoch, aes(x = epoch, y = group_task_jumps)) +
   geom_point(alpha = 0.7) +
@@ -1741,30 +2163,11 @@ print(jumps_by_epoch)
 
 ```
 
-### General Errors over time 
-I am plotting general errors over time to check if scores are stable across training. A median split has been performed to separate participants into a high error group and a low error group.
-
-```{r gen error by epoch, echo=FALSE, warning=FALSE}
-
-med_split_data <- read.csv(here("res/med_split_gen_error.csv"))
-
-gen_error_by_epoch <- ggplot(med_split_data, aes(x = epoch, y = gen_error, colour = error_group, fill = error_group)) +
-  geom_point(size = 1.3) +
-  geom_line(linewidth = 0.8) +
-  labs(x = "Epoch", y = "General Error", 
-       colour = 'Error Group', fill = 'Error Group') +
-  scale_x_continuous(limits = c(1, 8), breaks = seq(1, 8, by = 1))+
-  theme_classic() +
-  facet_wrap(~train_type)
-
-print(gen_error_by_epoch)
-
-```
 
 ### Transfer Accuracy by First Transfer Condition
 To determine whether performance one one transfer condition affected performance on subsequent transfer conditions, we can plot the accuracy data based on the first transfer condition people received.
 
-```{r accuracy by first transfer condition, echo = FALSE, warning=FALSE}
+```{r accuracy by first transfer condition, echo = FALSE, warning=FALSE, fig.show='hold', out.width="49%"}
 
 all_transfer_data$first_transfer <- factor(
   all_transfer_data$first_transfer,
@@ -1826,10 +2229,10 @@ print(accuracy_by_first_trf)
 
 ```
 
-#### Exploratory analyses
+
 We can determine whether order affects performance on transfer by assessing for a three way interaction between first transfer condition, group, and transfer condition.
 
-*Interaction is not significant*
+**Interaction is not significant**
 
 ```{r order interaction, echo=FALSE, warning=FALSE}
 
@@ -1851,7 +2254,7 @@ We can also examine whether similarity in the two learned task-sets influences p
 
 **There is no interaction between task-set configuration, transfer and group.**
 
-```{r transfer by task-set, echo=FALSE, warning=FALSE}
+```{r transfer by task-set, echo=FALSE, warning=FALSE, fig.show='hold', out.width="49%"}
 
 all_transfer_data$transfer <- factor(
   all_transfer_data$transfer,
