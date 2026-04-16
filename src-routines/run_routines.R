@@ -59,8 +59,14 @@ for (sub in subs) {
     # then convert this into a probability matrix out of all trials in that condition
     prob_mat <- p_st1_gs(tot_counts_mat, n_doors) 
     
+    # then get the entropy for each row of prob_mat
+    entropy_per_row <- apply(prob_mat, 1, H)
+    
+    # and get the total entropy by summing across rows
+    entropy <- sum(entropy_per_row)
+    
     # then get entropy for that condition  
-    entropy <- H(prob_mat) 
+    # entropy <- H(prob_mat) 
     
     tmp <- data.frame(sid, session, train_type, condition, entropy) 
     data <- rbind(data, tmp)
@@ -68,7 +74,7 @@ for (sub in subs) {
 }
 
 # writing the data into a csv file
-write.csv(data,file.path('res',paste(paste(exp,'entropy',sep='_'),'csv', sep='.')), row.names = FALSE)
+write.csv(data,file.path('res',paste(paste(exp,'entropy_updated',sep='_'),'csv', sep='.')), row.names = FALSE)
 
 
   
