@@ -59,13 +59,13 @@ for (sub in subs) {
     # then convert this into a probability matrix out of all trials in that condition
     prob_mat <- p_st1_gs(tot_counts_mat, n_doors) 
     
-    # then get the entropy for each row of prob_mat
+    # then get the entropy for each row of prob_mat and sum across rows
     entropy_per_row <- apply(prob_mat, 1, H)
-    
-    # and get the total entropy by summing across rows
     entropy <- sum(entropy_per_row)
     
-    # then get entropy for that condition  
+    # this next line of code takes the entropy for the whole probability matrix
+    # and produces the same values as lines 63 and 64 if entropy is calculated
+    # for each row separately.
     # entropy <- H(prob_mat) 
     
     tmp <- data.frame(sid, session, train_type, condition, entropy) 
