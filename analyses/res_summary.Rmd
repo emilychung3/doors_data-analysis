@@ -9,45 +9,24 @@ date: "2026-01-07"
 This document contains the plots and analyses for all measures used to assess performance in the doors experiment. Planned analyses are conducted for the training and transfer phase as outlined in the pregistration document for this study *[INSERT LINK HERE]*.
 
 ```{r libraries, include=FALSE}
+rm(list = ls())
+
 # load libraries 
 library(here) # setting working directory to the project directory
 library(tidyverse)
 library(dplyr)
 
 library(ggplot2) # libraries for plotting data
-library(wesanderson)
 library(gghalves)
 
 library(afex) # libraries for performing planned contrast analyses
 library(emmeans)
 library(BayesFactor)
+library(car)
 afex_options(emmeans_model = "multivariate")
 
 ```
 
-```{r dataframes, include=FALSE}
-
-# load dataframes
-training_data <- read.csv(here("res/training_jumps_gen-error.csv"))
-training_entropy <- read.csv(here("res/training_entropy.csv"))
-training_entropy_stay <- read.csv(here("res/training_STAY_entropy.csv"))
-training_by_epoch <- read.csv(here("res/training_by_epoch.csv"))
-
-all_transfer_data <- read.csv(here("res/all_transfer_data.csv"))
-non_learners <- read.csv(here("res/nonlearners.csv"))
-learn_onset_data <- read.csv(here("res/post_exclusion_transfer_data.csv"))
-
-all_btwn_transfer_data <- read.csv(here("res/all_btwn_transfer_data.csv"))
-btwn_non_learners <- read.csv(here("res/btwn_nonlearners.csv"))
-learn_onset_btwn_data <- read.csv(here("res/post_exclusion_btwn_data.csv"))
-
-<<<<<<< HEAD
-task_memory_data <- read.csv(here("res/task_memory_summary.csv"))
-=======
->>>>>>> f330f780d823eda72276f461c384746cf37ff274
-ind_diffs <- read.csv(here("res/all_individual_differences.csv"))
-
-```
 
 ## Training Stage
 
@@ -57,20 +36,34 @@ Three key measures are used to assess performance in the Training Stage:
 - **Transition entropy**
 - **General Errors**
 
+```{r training dataframes, include=FALSE}
+
+# load dataframes
+training_data <- read.csv(here("res/training_jumps_gen-error.csv"))
+training_entropy <- read.csv(here("res/training_entropy.csv"))
+training_entropy_stay <- read.csv(here("res/training_STAY_entropy.csv"))
+
+```
+
 ### Task Jumps
 
 Task Jumps measure the extent to which training causes a mixing of door selections from Task A and B during pursuit of a single target. ‘Task jumps’ record the number of transitions between target locations from task-set A and B per trial. For example, a sequence of four door selections following the pattern of A1-B1-B2-A2 would incur a score of 2. This is due to the switch from task-set A to B on the second door selection, which is followed by a subsequent switch back to Task A on the fourth selection. Transitions to doors which are not relevant to any task are not recorded in this measure, however we do record irrelevant door selections to confirm whether they occur at a rate that is lower than would be expected by chance
 
 ```{r task jumps, echo=FALSE, warning=FALSE, fig.show='hold', out.width="49%"}
-data <- training_data
+
+training_data$switch <- factor(
+  training_data$switch,
+  levels = c("Switch", "Stay")
+)
+
 iv <- training_data$switch
 x_axis_lab <- 'Trial type'
 dv <- training_data$mean_task_jumps
 y_axis_lab <- 'Task Jumps'
-these_cols <- wes_palette("AsteroidCity3")[c(1, 4)]
+these_cols <- c("#004aad", "#ffbd59")
 
 
-task_jumps <- ggplot(data = data, 
+task_jumps <- ggplot(data = training_data, 
                  mapping = aes(x = iv, y = dv, colour = iv, fill = iv)) +
     geom_half_violin(side = "r", scale = "width", 
                      width = 0.6,
@@ -79,35 +72,35 @@ task_jumps <- ggplot(data = data,
     geom_half_point(side = "l", alpha = 0.5, size = 1.5,
                     width = 0.6,
                     position = position_jitter(width = 0.05)) +
-    geom_boxplot(width = 0.1, alpha = 0.9, linewidth = 0.3, colour = "grey20", 
+    geom_boxplot(width = 0.1, alpha = 0.7, linewidth = 0.3, colour = "grey20", 
                  outlier.shape = NA) +
     scale_y_continuous(limits = c(0, max(dv)), breaks = seq(0, 7.5, by = 1)) +
     scale_fill_manual(values = these_cols) +
     scale_colour_manual(values = these_cols) +
     labs(x = x_axis_lab, y = y_axis_lab) + 
     stat_summary(fun = mean, geom = "point", shape = 23, size = 2, 
-                colour = "grey20", fill = "grey20") +
+                colour = "black", fill = "black") +
     facet_wrap(~train_type) +
     theme_classic(base_size = 16) +
     theme(
       legend.position = "none",
-      strip.background = element_rect(fill = "#f0e6da", colour = NA),
-      strip.text = element_text(face = "bold", size = 14),
+      strip.background = element_rect(colour = NA),
+      strip.text = element_text(face = "bold", size = 12),
       axis.line.x = element_line(color = "grey20", linewidth = 0.5),
       axis.line.y = element_line(color = "grey20", linewidth = 0.5),
       axis.ticks = element_line(color = "grey20", linewidth = 0.5),
-      axis.text = element_text(color = "grey20", size = 14),
-      axis.title = element_text(face = 'bold', color = "grey20", size = 16),
+      axis.text = element_text(color = "grey20", size = 12),
+      axis.title = element_text(face = 'bold', color = "grey20", size = 14),
       axis.title.x = element_text(margin = margin(t = 10)),
       axis.title.y = element_text(margin = margin(r = 10)) 
     )
     
 print(task_jumps)
-
 ggsave(here("res/plots/task_jumps.png"), plot = task_jumps, 
-       width = 7, height = 5)
+       width = 6, height = 4)
 
 ```
+
 
 #### Planned Analyses
 
@@ -115,7 +108,21 @@ We will perform a 2 (Group: stable vs. variable) x 2 (Trial Type: stay vs. switc
 
 Before that, we should check if the data meets the assumptions for homogeneity of variance and normality, by checking if the variance ratio exceed 1.5. The variance ratio is the ratio between the largest and smallest variance values across conditions. We should also check for outliers, which are classified as scored greater than 2.5 SDs from the mean for each grou x trial type condition. The following output shows a summary of the descriptive statistics and number of outliers from each condition.
 
-```{r variance on task jump conditions, echo=FALSE, warning=FALSE}
+```{r}
+
+ggplot(training_data, aes(sample = mean_task_jumps)) +
+     stat_qq() +
+     stat_qq_line(col = "blue") +
+     theme_minimal()
+
+training_data <- training_data %>% 
+  mutate(log_jumps = log(mean_task_jumps),
+         sqrt_jumps = sqrt(mean_task_jumps))
+
+```
+
+
+```{r task jump descriptives, echo=FALSE, warning=FALSE}
 # getting mean, variance and standard deviation for each condition
 var_summary <- training_data %>% 
   group_by(train_type, switch) %>% 
@@ -344,35 +351,35 @@ iv <- training_entropy$train_type
 x_axis_lab <- 'Group'
 dv <- training_entropy$mean_entropy
 y_axis_lab <- 'Transition Entropy'
-these_cols <- wes_palette("AsteroidCity3")[c(1, 4)]
+these_cols <- these_cols <- c("#004aad", "#ffbd59")
 
 entropy <- ggplot(data = data, 
                  mapping = aes(x = iv, y = dv, colour = iv, fill = iv)) +
     geom_half_violin(side = "r", scale = "width", 
-                     width = 0.6,
+                     width = 0.4,
                      alpha = 0.3, linewidth = 0.3, 
                      trim = FALSE) +
     geom_half_point(side = "l", alpha = 0.5, size = 1.5,
-                    width = 0.6,
+                    width = 0.4,
                     position = position_jitter(width = 0.05)) +
-    geom_boxplot(width = 0.1, alpha = 0.9, linewidth = 0.3, colour = "grey20", 
+    geom_boxplot(width = 0.05, alpha = 0.9, linewidth = 0.3, colour = "grey20", 
                  outlier.shape = NA) +
     scale_y_continuous(limits = c(0, max(dv)), breaks = seq(0, 40, by = 10)) +
     scale_fill_manual(values = these_cols) +
     scale_colour_manual(values = these_cols) +
     labs(x = x_axis_lab, y = y_axis_lab) + 
     stat_summary(fun = mean, geom = "point", shape = 23, size = 2, 
-                colour = "grey20", fill = "grey20") +
+                colour = "black", fill = "black") +
     theme_classic(base_size = 16) +
     theme(
       legend.position = "none",
-      strip.background = element_rect(fill = "#f0e6da", colour = NA),
-      strip.text = element_text(face = "bold", size = 14),
+      strip.background = element_rect(colour = NA),
+      strip.text = element_text(face = "bold", size = 12),
       axis.line.x = element_line(color = "grey20", linewidth = 0.5),
       axis.line.y = element_line(color = "grey20", linewidth = 0.5),
       axis.ticks = element_line(color = "grey20", linewidth = 0.5),
-      axis.text = element_text(color = "grey20", size = 14),
-      axis.title = element_text(face = 'bold', color = "grey20", size = 16),
+      axis.text = element_text(color = "grey20", size = 12),
+      axis.title = element_text(face = 'bold', color = "grey20", size = 14),
       axis.title.x = element_text(margin = margin(t = 10)),
       axis.title.y = element_text(margin = margin(r = 10)) 
     )
@@ -380,7 +387,18 @@ entropy <- ggplot(data = data,
 print(entropy)
 
 ggsave(here("res/plots/entropy.png"), plot = entropy, 
-       width = 7, height = 5)
+       width = 6, height = 4)
+
+```
+
+```{r TE descriptives, echo=FALSE, warning=FALSE}
+
+var_summary <- training_entropy %>% 
+  group_by(train_type) %>% 
+  summarise(mean = mean(mean_entropy),
+            sd = sd(mean_entropy))
+
+print(var_summary)
 
 ```
 
@@ -592,12 +610,17 @@ A General Error is made when a door which belongs to neither Task A nor B is sel
 Participants who have an average general error greater than 0.25 on *stay* trials during training will be excluded from analyses of the test phase. No subjects met this criteria, and thus, no participants will be excluded from analyses of transfer phase.
 
 ```{r general errors, echo = FALSE, warning=FALSE, fig.show='hold', out.width="49%"}
-data <- training_data
+
+training_data$switch <- factor(
+  training_data$switch,
+  levels = c("Switch", "Stay")
+)
+
 iv <- training_data$switch
 x_axis_lab <- 'Trial type'
 dv <- training_data$mean_gen_error
 y_axis_lab <- 'General Errors'
-these_cols <- wes_palette("AsteroidCity3")[c(1, 4)]
+these_cols <- these_cols <- c("#004aad", "#ffbd59")
 
 gen_errors <- ggplot(data = data, 
                  mapping = aes(x = iv, y = dv, colour = iv, fill = iv)) +
@@ -608,32 +631,32 @@ gen_errors <- ggplot(data = data,
     geom_half_point(side = "l", alpha = 0.5, size = 1.5,
                     width = 0.6,
                     position = position_jitter(width = 0.05)) +
-    geom_boxplot(width = 0.1, alpha = 0.9, linewidth = 0.3, colour = "grey20", 
+    geom_boxplot(width = 0.1, alpha = 0.7, linewidth = 0.3, colour = "grey20", 
                  outlier.shape = NA) +
     scale_y_continuous(limits = c(0, max(dv)), breaks = seq(0, 1, by = 0.1)) +
     scale_fill_manual(values = these_cols) +
     scale_colour_manual(values = these_cols) +
     labs(x = x_axis_lab, y = y_axis_lab) + 
     stat_summary(fun = mean, geom = "point", shape = 23, size = 2, 
-                colour = "grey20", fill = "grey20") +
+                colour = "black", fill = "black") +
     facet_wrap(~train_type) +
     theme_classic(base_size = 16) +
     theme(
       legend.position = "none",
-      strip.background = element_rect(fill = "#f0e6da", colour = NA),
-      strip.text = element_text(face = "bold", size = 14),
+      strip.background = element_rect(colour = NA),
+      strip.text = element_text(face = "bold", size = 12),
       axis.line.x = element_line(color = "grey20", linewidth = 0.5),
       axis.line.y = element_line(color = "grey20", linewidth = 0.5),
       axis.ticks = element_line(color = "grey20", linewidth = 0.5),
-      axis.text = element_text(color = "grey20", size = 14),
-      axis.title = element_text(face = 'bold', color = "grey20", size = 16),
+      axis.text = element_text(color = "grey20", size = 12),
+      axis.title = element_text(face = 'bold', color = "grey20", size = 14),
       axis.title.x = element_text(margin = margin(t = 10)),
       axis.title.y = element_text(margin = margin(r = 10)) 
     )
     
 print(gen_errors)   
 
-ggsave(here("res/plots/general_errors.png"), plot = gen_errors, width = 7, height = 5)
+ggsave(here("res/plots/general_errors.png"), plot = gen_errors, width = 6, height = 4)
 
 ```
 
@@ -664,7 +687,7 @@ We will assess for a 2 (Group: stable vs. variable) x 2 (Trial Type: switch vs. 
 
 First, we will check whether the data violates assumptions of homogeneity of variance and normality for the ANOVA by checking if the variance ratio exceeds 1.5. The following output shows the descriptives data and number of outliers for each Group x Trial Type condition.
 
-```{r variance on general error conditions, echo = FALSE, warnings = FALSE}
+```{r general error descriptives, echo = FALSE, warnings = FALSE}
 # get mean, variance and standard deviations for each condition
 var_summary <- training_data %>% 
   group_by(train_type, switch) %>% 
@@ -934,6 +957,21 @@ Three key measures are used to assess performance during the Transfer Test Stage
 - **Learning Onset**
 - **Setting Error**
 
+```{r transfer dataframes, include=FALSE}
+
+# load dataframes
+all_transfer_data <- read.csv(here("res/all_transfer_data.csv"))
+learn_onset_data <- read.csv(here("res/post_exclusion_transfer_data.csv"))
+non_learners <- read.csv(here("res/nonlearners.csv"))
+
+all_btwn_transfer_data <- read.csv(here("res/all_btwn_transfer_data.csv"))
+btwn_non_learners <- read.csv(here("res/btwn_nonlearners.csv"))
+learn_onset_btwn_data <- read.csv(here("res/post_exclusion_btwn_data.csv"))
+
+task_memory_data <- read.csv(here("res/task_memory_summary.csv"))
+ind_diffs <- read.csv(here("res/all_individual_differences.csv"))
+
+```
 
 ### Accuracy
 
@@ -944,7 +982,7 @@ Accuracy is a measure of performance in the transfer task. It is the proportion 
 # specifying the order that I want my transfer conditions to appear
 all_transfer_data$transfer <- factor(
   all_transfer_data$transfer,
-  levels = c("Novel", "Partial", "Complete")
+  levels = c("Partial", "Complete", "Novel")
 )
 
 # specifying key variables
@@ -953,10 +991,10 @@ iv <- all_transfer_data$transfer
 x_axis_lab <- 'Transfer type'
 dv <- all_transfer_data$mean_acc
 y_axis_lab <- 'Accuracy'
-these_cols <- c("#8da0cb", "#e78ac3", "#a6d854")
+these_cols <- c("#00bf63", "#ff66c4", "#ff914d")
 
 # plotting now
-jitter_pos <- position_jitterdodge(jitter.width = 0.01) 
+jitter_pos <- position_dodge(width = 0.2) 
   
 accuracy <- ggplot(data = data, 
                 mapping = aes(x = iv, y = dv, colour = iv, fill = iv)) +
@@ -968,28 +1006,28 @@ accuracy <- ggplot(data = data,
             alpha = 0.3, 
             colour = "grey",
             position = jitter_pos) +
-  geom_boxplot(width = 0.2, 
-               alpha = 0.8, 
-               linewidth = 0.3, 
-               colour = 'grey20', 
-              outlier.shape = NA) +
-  stat_summary(fun = mean, geom = "point", shape = 23, size = 2, 
+  stat_summary(fun = mean, geom = "point", shape = 23, size = 1.5, 
                colour = "grey20", fill = "grey20") +
+  stat_summary(aes(group = iv),
+               fun.data = mean_se, 
+               geom = "errorbar", 
+               width = 0.05,  
+               colour = "grey20") +
   scale_y_continuous(limits = c(0.4, 1), breaks = seq(0.4, 1, by = 0.1)) +
   labs(x = x_axis_lab, y = y_axis_lab) +
-  theme_classic(base_size = 16)+
+  theme_classic(base_size = 16) +
   scale_fill_manual(values = these_cols) +
   scale_colour_manual(values = these_cols) +
   facet_wrap(~train_type) +
   theme(
     legend.position = "none",
-    strip.background = element_rect(fill = "#f0e6da", colour = "NA"),
-    strip.text = element_text(face = "bold", size = 14),
+    strip.background = element_rect(colour = "NA"),
+    strip.text = element_text(face = "bold", size = 12),
     axis.line.x = element_line(color = "grey20", linewidth = 0.5),
     axis.line.y = element_line(color = "grey20", linewidth = 0.5),
     axis.ticks = element_line(color = "grey20", linewidth = 0.5),
-    axis.text = element_text(color = "grey20", size = 14),
-    axis.title = element_text(face = "bold", color = "grey20", size = 16),
+    axis.text = element_text(color = "grey20", size = 12),
+    axis.title = element_text(face = "bold", color = "grey20", size = 14),
     axis.title.x = element_text(margin = margin(t = 10)),
     axis.title.y = element_text(margin = margin(r = 10)) 
   )
@@ -997,7 +1035,24 @@ accuracy <- ggplot(data = data,
 print(accuracy) 
 
 ggsave(here("res/plots/accuracy_full.png"), plot = accuracy, 
-       width = 7, height = 5)
+       width = 6, height = 4)
+
+```
+
+### Descriptives for accuracy
+```{r acc descriptives, echo=FALSE, warning=FALSE}
+
+var_summary <- all_transfer_data %>% 
+  group_by(train_type, transfer) %>% 
+  summarise(mean = mean(mean_acc),
+            sd = sd(mean_acc))
+
+print(var_summary)
+
+transfer_cond_desc <-  all_transfer_data %>% 
+  group_by(transfer) %>% 
+  summarise(mean = mean(mean_acc),
+            sd = sd(mean_acc))
 
 ```
 
@@ -1109,9 +1164,10 @@ print(acc_between_subs)
 
 ```
 
-In a separate analyses, we will regress order onto accuracy, and perform the group comparisons on the residuals.
 
-```{r regressing order onto accuracy}
+In a separate analyses, we will regress order onto accuracy, and perform the group comparisons on the residuals. **This analysis returns the same results as above**.
+
+```{r regressing order onto accuracy, echo=FALSE, warning=FALSE}
 
 # regress order onto acc and get residuals
 acc_regress_order <- lm(mean_acc ~ order_id, data = all_transfer_data)
@@ -1127,12 +1183,12 @@ acc_residuals <- cbind(all_transfer_data, acc_residuals) %>%
 ```{r planned comparisons accuracy residuals, echo=FALSE}
 # fit the data to an ANOVA model
 acc_resid_anova <- aov_ez('sub',
-                         'mean_acc', 
+                         'acc_residuals', 
                          acc_residuals, 
                          between = 'train_type',
                          within = 'transfer')
 
-print(acc_resid_anova)
+print(acc_resid_anova) # significant main effect of transfer
 
 # get estimated marginal means
 acc_resid_emm <- emmeans(acc_resid_anova, c("train_type", "transfer"))
@@ -1151,7 +1207,7 @@ within_main <- list("novelvs.part" = novel_vs_part,
                     "novelvs.comp" = novel_vs_comp)
 transfer_main_acc <- contrast(acc_resid_emm, within_main, adjust = "bonferroni")
 
-print(transfer_main_acc)
+print(transfer_main_acc) # novel versus comp comparison significant
 
 
 ## interaction family, (k = 2)
@@ -1161,26 +1217,11 @@ interactions <- list("groupxnovelvs.part" = novel_part_int,
                      "groupxpartvs.comp" = part_comp_int)
 interactions_acc <- contrast(acc_resid_emm, interactions, adjust = "bonferroni")
 
-print(interactions_acc)
+print(interactions_acc) # no significant interactions
 
 ```
 
-
-In an **exploratory analysis**, we will regress order onto accuracy, and perform the group comparisons on the residuals.
-
-```{r regressing order onto accuracy}
-
-# regress order onto acc and get residuals
-acc_regress_order <- lm(mean_acc ~ first_transfer, data = all_transfer_data)
-summary(acc_regress_order)
-acc_residuals <- resid(acc_regress_order)
-
-# add results to subject data 
-acc_residuals <- cbind(all_transfer_data, acc_residuals) %>% 
-  select(sub, train_type, transfer, order_id, first_transfer, acc_residuals)
-
-```
-
+#### Regressing bias scores onto transition entropy
 To determine whether the strength of a routine correlated with performance in transfer, we will also correlate transition entropy to bias scores for partial transfer accuracy, relative to performance on the:
 1. novel condition where bias = partial/(partial + novel)
 2. complete transfer where bias = partial/(partial + complete)
@@ -1287,29 +1328,27 @@ ggsave(here("res/plots/qq_TE_transformed.png"), plot = qq_TE_transformed, width 
 Now we can plot the correlation between transition entropy and the two bias scores.
 ```{r TE and bias correlation, echo = FALSE, warning = FALSE}
 
-# # correlating TE with bias scores over complete accuracy
-# TExcomplete_bias <- ggplot(data = bias_scores, 
-#                            aes(x = mean_entropy,
-#                                y = bias_ovr_complete)) +
-#   geom_point(colour = "orange") +
-#   theme_classic()
-# print(cor(bias_scores$bias_ovr_complete, bias_scores$mean_entropy)) # r = 0.01
-# model <- lm(bias_scores$bias_ovr_complete ~ bias_scores$mean_entropy)
-# summary(model)
-# 
-# # correlating TE with bias scores over novel accuracy
-# TExnovel_bias <- ggplot(data = bias_scores, 
-#                            aes(x = mean_entropy,
-#                                y = bias_over_novel)) +
-#   geom_point(colour = "orange") +
-#   theme_classic()
-# print(cor(bias_scores$bias_ovr_novel, bias_scores$mean_entropy)) # r = 0.12
-# 
-# print(TExcomplete_bias)
+# correlating TE with bias scores over complete accuracy
+TExcomplete_bias <- ggplot(data = bias_scores,
+                           aes(x = mean_entropy,
+                               y = bias_ovr_complete)) +
+  geom_point(colour = "orange") +
+  theme_classic()
+print(cor(bias_scores$bias_ovr_complete, bias_scores$mean_entropy)) # r = 0.01
+model <- lm(bias_scores$bias_ovr_complete ~ bias_scores$mean_entropy)
+summary(model)
 
+# correlating TE with bias scores over novel accuracy
+TExnovel_bias <- ggplot(data = bias_scores,
+                           aes(x = mean_entropy,
+                               y = bias_over_novel)) +
+  geom_point(colour = "orange") +
+  theme_classic()
+print(cor(bias_scores$bias_ovr_novel, bias_scores$mean_entropy)) # r = 0.12
+
+print(TExcomplete_bias)
 
 ```
-
 
 
 ### Learning Onset
@@ -1324,13 +1363,12 @@ Criteria for coding evidence of doors for learning onset are as follows:
 
 E.g., for a door sequence of door selections ‘A-B-X-Y-C', doors A and B are assigned a value of 1, door C is assigned 0. Door D which is missing from the sequence of clicks is assigned 1, if it was correctly selected before an error on the last trial a click on Door D was recorded, and NA if else. 
 
-
 ```{r learning onset, echo = FALSE, warning=FALSE, fig.show='hold', out.width="49%"}
 
 # specifying the order that I want my transfer conditions to appear
 learn_onset_data$transfer <- factor(
   learn_onset_data$transfer,
-  levels = c("Novel", "Partial", "Complete")
+  levels = c("Partial", "Complete", "Novel")
 )
 
 # specifying key variables
@@ -1339,10 +1377,10 @@ iv <- learn_onset_data$transfer
 x_axis_lab <- 'Transfer type'
 dv <- learn_onset_data$k4_onset
 y_axis_lab <- 'Learning Onset'
-these_cols <- c("#8da0cb", "#e78ac3", "#a6d854")
+these_cols <- c("#00bf63", "#ff66c4", "#ff914d")
 
 # now plot
-jitter_pos <- position_jitterdodge(jitter.width = 0.01) 
+jitter_pos <- position_dodge(width = 0.2) 
   
 learning_onset <- ggplot(data = data, 
                 mapping = aes(x = iv, y = dv, colour = iv, fill = iv)) +
@@ -1354,13 +1392,18 @@ learning_onset <- ggplot(data = data,
             alpha = 0.3, 
             colour = "grey",
             position = jitter_pos) +
-  geom_boxplot(width = 0.2, 
-               alpha = 0.8, 
-               linewidth = 0.3, 
-               colour = 'grey20', 
-              outlier.shape = NA) +
+  # geom_boxplot(width = 0.2, 
+  #              alpha = 0.8, 
+  #              linewidth = 0.3, 
+  #              colour = 'grey20', 
+  #             outlier.shape = NA) +
   stat_summary(fun = mean, geom = "point", shape = 23, size = 2, 
                colour = "grey20", fill = "grey20") +
+  stat_summary(aes(group = iv),
+               fun.data = mean_se, 
+               geom = "errorbar", 
+               width = 0.05,  
+               colour = "grey20") +
   scale_y_continuous(limits = c(0, 40), breaks = seq(0, 40, by = 10)) +
   labs(x = x_axis_lab, y = y_axis_lab) +
   theme_classic(base_size = 16)+
@@ -1369,18 +1412,21 @@ learning_onset <- ggplot(data = data,
   facet_wrap(~train_type) +
   theme(
     legend.position = "none",
-    strip.background = element_rect(fill = "#f0e6da", colour = "NA"),
-    strip.text = element_text(face = "bold", size = 14),
+    strip.background = element_rect(colour = "NA"),
+    strip.text = element_text(face = "bold", size = 12),
     axis.line.x = element_line(color = "grey20", linewidth = 0.5),
     axis.line.y = element_line(color = "grey20", linewidth = 0.5),
     axis.ticks = element_line(color = "grey20", linewidth = 0.5),
-    axis.text = element_text(color = "grey20", size = 14),
-    axis.title = element_text(face = "bold", color = "grey20", size = 16),
+    axis.text = element_text(color = "grey20", size = 12),
+    axis.title = element_text(face = "bold", color = "grey20", size = 14),
     axis.title.x = element_text(margin = margin(t = 10)),
     axis.title.y = element_text(margin = margin(r = 10)) 
   )
 
 print(learning_onset)
+
+ggsave(here("res/plots/learn_onset.png"), plot = learning_onset, 
+       width = 6, height = 4)
 
 ```
 
@@ -1393,7 +1439,6 @@ print(non_learners)
 ```
 
 Again, we can look at the learning onset data in a between subjects manner.
-
 
 ```{r between learning onset, echo = FALSE, warning=FALSE, fig.show='hold', out.width="49%"}
 data <- learn_onset_btwn_data
@@ -1450,6 +1495,22 @@ print(btwn_non_learners)
 
 ```
 
+```{r acc descriptives, echo=FALSE, warning=FALSE}
+
+var_summary <- learn_onset_data %>% 
+  group_by(train_type, transfer) %>% 
+  summarise(mean = mean(k4_onset),
+            sd = sd(k4_onset))
+
+print(var_summary)
+
+transfer_cond_desc <-  learn_onset_data %>% 
+  group_by(transfer) %>% 
+  summarise(mean = mean(k4_onset),
+            sd = sd(k4_onset))
+
+```
+
 #### Planned Analyses
 Planned contrasts are performed for learning onset as they are for accuracy. *No comparisons return significant.*
 
@@ -1494,6 +1555,64 @@ print(interactions_learn_onset)
 
 ```
 
+
+
+Now, we will regress the order conditions onto learning onset and perform the same planned analyses.
+**Results from these analysis are the same as above**
+
+```{r regressing order onto learn onset, echo=FALSE, warning=FALSE}
+
+# regress order onto acc and get residuals
+onset_regress_order <- lm(k4_onset ~ order_id, data = learn_onset_data)
+summary(onset_regress_order)
+onset_residuals <- resid(onset_regress_order)
+
+# add residuals to subject data 
+onset_residuals <- cbind(learn_onset_data, onset_residuals) %>% 
+  select(sub, train_type, transfer, order_id, first_transfer, onset_residuals)
+
+```
+
+```{r planned comparisons learn onset residuals, echo=FALSE}
+# fit the data to an ANOVA model
+onset_resid_anova <- aov_ez('sub',
+                         'onset_residuals', 
+                         onset_residuals, 
+                         between = 'train_type',
+                         within = 'transfer')
+
+print(onset_resid_anova) # no significant effects
+
+# get estimated marginal means
+onset_resid_emm <- emmeans(onset_resid_anova, c("train_type", "transfer"))
+
+print(onset_resid_emm)
+
+# specify contrasts and run analyses for:
+group_main <- c(1, -1, 1, -1, 1, -1)
+
+## within family, (k = 3)
+novel_vs_part <- c(1, 1, -1, -1, 0, 0) 
+part_vs_comp <- c(0, 0, 1, 1, -1, -1) 
+novel_vs_comp <- c(1, 1, 0, 0, -1, -1) 
+within_main <- list("novelvs.part" = novel_vs_part,
+                    "partvs.comp" = part_vs_comp,
+                    "novelvs.comp" = novel_vs_comp)
+transfer_main_acc <- contrast(onset_resid_emm, within_main, adjust = "bonferroni")
+
+print(transfer_main_acc) # no significant effects
+
+
+## interaction family, (k = 2)
+novel_part_int <- group_main*novel_vs_part
+part_comp_int <- group_main*part_vs_comp
+interactions <- list("groupxnovelvs.part" = novel_part_int, 
+                     "groupxpartvs.comp" = part_comp_int)
+interactions_acc <- contrast(onset_resid_emm, interactions, adjust = "bonferroni")
+
+print(interactions_acc) # no significant interactions
+
+```
 
 ### Number of locations learned
 
@@ -1643,7 +1762,7 @@ setting_error <- ggplot(data = data,
               outlier.shape = NA) +
   stat_summary(fun = mean, geom = "point", shape = 23, size = 2, 
                colour = "grey20", fill = "grey20") +
-  scale_y_continuous(limits = c(0, 0.5), breaks = seq(0, 0.5, by = 0.1)) +
+  scale_y_continuous(limits = c(0, 0.5), breaks = seq(0, 0.4, by = 0.1)) +
   labs(x = x_axis_lab, y = y_axis_lab) +
   theme_classic(base_size = 16)+
   scale_fill_manual(values = these_cols) +
@@ -1768,8 +1887,15 @@ In addition, participants once again performed at ceiling, which suggests that o
 
 ## Task Memory
 
+```{r target memory dataframes, include=FALSE}
+
+# load dataframes
+task_memory_data <- read.csv(here("res/task_memory_summary.csv"))
+
+```
+
 ### Target location memory
-```{r task location memory, echo=FALSE, warnings=FALSE, fig.show='hold', out.width="49%"}
+```{r task location memory, echo=FALSE, warning=FALSE, fig.show='hold', out.width="49%"}
 data <- task_memory_data
 iv <- task_memory_data$train_type
 x_axis_lab <- 'Group'
@@ -1816,17 +1942,13 @@ print(task_mem)
 
 We can compare the number of target locations remembered between groups to determine whether training or transfer interrupted memory of the locations.
 
-<<<<<<< HEAD
 ```{r ttest task location memory, echo = FALSE, warning = FALSE}
-=======
-```{r target memory group diff, echo=FALSE, warnings=FALSE}
->>>>>>> f330f780d823eda72276f461c384746cf37ff274
+
 ttestBF(formula = mean_locs_correct ~ train_type, data = ind_diffs)
 
 ```
 
 
-<<<<<<< HEAD
 #### Task memory by transfer
 Now, we can also compare the look at whether the proportion of doors remembered each learned task, in terms of whether it was transferred to the complete condition, partial condition, both, or not transferred at all.
 
@@ -1850,23 +1972,24 @@ task_memory_by_trf$transferred_to <- factor(task_memory_by_trf$transferred_to,  
 levels(task_memory_by_trf$transferred_to) <- c("Both", "Complete Only", "Partial Only", "Never transferred")
 
 # now plot
-x_axis_lab <- 'learned doors by transfer condition'
-y_axis_lab <- 'proportion correct'
-these_cols <- wes_palette("AsteroidCity3")[c(1, 2, 3, 4)]
-jitter_pos <- position_jitterdodge(jitter.width = 0.01) 
+x_axis_lab <- 'Learned Locations by Transfer Condition'
+y_axis_lab <- 'Proportion Correct'
+these_cols <- c("#004aad", "#00bf63", "#ff66c4", "#ff914d")
+
 
 plot_memory_by_trf <- ggplot(data = task_memory_by_trf, 
                 mapping = aes(x = transferred_to, y = proportion_correct, colour = transferred_to, fill = transferred_to)) +
   geom_point(aes(group = sub),
              alpha = 0.3, 
              size = 1.5,
-             position = jitter_pos) +
-  stat_summary(fun = mean, geom = "point", shape = 21, size = 2, 
-               colour = "grey20", fill = "grey20") +
+             position = position_dodge(width = 0.3)) +
+  stat_summary(fun = mean, geom = "point", shape = 23, size = 1.5, 
+               colour = "black", fill = "black") +
   stat_summary(fun = mean, geom = "line", 
                aes(group = 1), 
-               colour = 'grey20', 
-               linewidth = 0.5)+
+               colour = 'black', 
+               linewidth = 0.4)+
+  scale_y_continuous(breaks = seq(0, 1, by = 0.5)) +
   labs(x = x_axis_lab, y = y_axis_lab) +
   theme_classic(base_size = 16) +
   scale_fill_manual(values = these_cols) +
@@ -1874,21 +1997,23 @@ plot_memory_by_trf <- ggplot(data = task_memory_by_trf,
   facet_wrap(~ train_type) +
   theme(
     legend.position = "none",
-    strip.background = element_rect(fill = "#f0e6da", colour = "NA"),
-    strip.text = element_text(face = "bold", size = 9),
+    strip.background = element_rect(colour = "NA"),
+    strip.text = element_text(margin = margin(b = 10),
+                              face = "bold", 
+                              size = 11),
     axis.line.x = element_line(color = "grey20", linewidth = 0.5),
     axis.line.y = element_line(color = "grey20", linewidth = 0.5),
     axis.ticks = element_line(color = "grey20", linewidth = 0.5),
-    axis.text = element_text(color = "grey20", size = 9),
-    axis.title = element_text(face = "bold", color = "grey20", size = 10),
-    axis.title.x = element_text(margin = margin(t = 10)),
-    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.text = element_text(color = "grey20", size = 10),
+    axis.title = element_text(face = "bold", color = "grey20", size = 13),
+    axis.title.x = element_blank(),
+    axis.text.x = element_text(angle = 30, hjust = 1),
     axis.title.y = element_text(margin = margin(r = 10)) 
   )
 
 print(plot_memory_by_trf)
 
-ggsave(here("res/plots/task_memory_by_trf.png"), plot = plot_memory_by_trf, width = 7, height = 5)
+ggsave(here("res/plots/task_memory_by_trf.png"), plot = plot_memory_by_trf, width = 6, height = 4)
 
 ```
 
@@ -1936,23 +2061,23 @@ task_memory_by_trf$comp_vs_part_order <- factor(task_memory_by_trf$comp_vs_part_
                                                 levels = c("Complete before Partial", "Complete after Partial"))
 
 # now plot
-x_axis_lab <- 'learned doors by transfer condition'
-y_axis_lab <- 'proportion correct'
-these_cols <- wes_palette("AsteroidCity3")[c(1, 2, 3, 4)]
-jitter_pos <- position_jitterdodge(jitter.width = 0.01) 
+x_axis_lab <- 'Learned Locations by Transfer Condition'
+y_axis_lab <- 'Proportion Correct'
+these_cols <- c("#004aad", "#00bf63", "#ff66c4", "#ff914d")
 
 plot_transfer_order <- ggplot(data = task_memory_by_trf, 
                 mapping = aes(x = transferred_to, y = proportion_correct, colour = transferred_to, fill = transferred_to)) +
   geom_point(aes(group = sub),
              alpha = 0.3, 
              size = 1.5,
-             position = jitter_pos) +
-  stat_summary(fun = mean, geom = "point", shape = 21, size = 2, 
-               colour = "grey20", fill = "grey20") +
+             position = position_dodge(width = 0.3)) +
+  stat_summary(fun = mean, geom = "point", shape = 23, size = 1.5, 
+               colour = "black", fill = "black") +
   stat_summary(fun = mean, geom = "line", 
                aes(group = 1), 
-               colour = 'grey20', 
-               linewidth = 0.5)+
+               colour = 'black', 
+               linewidth = 0.3)+
+  scale_y_continuous(breaks = seq(0, 1, by = 0.5)) +
   labs(x = x_axis_lab, y = y_axis_lab) +
   theme_classic(base_size = 16) +
   scale_fill_manual(values = these_cols) +
@@ -1960,21 +2085,23 @@ plot_transfer_order <- ggplot(data = task_memory_by_trf,
   facet_wrap(~ comp_vs_part_order) +
   theme(
     legend.position = "none",
-    strip.background = element_rect(fill = "#f0e6da", colour = "NA"),
-    strip.text = element_text(face = "bold", size = 9),
+    strip.background = element_rect(colour = "NA"),
+    strip.text = element_text(margin = margin(b = 10),
+                              face = "bold", 
+                              size = 11),
     axis.line.x = element_line(color = "grey20", linewidth = 0.5),
     axis.line.y = element_line(color = "grey20", linewidth = 0.5),
     axis.ticks = element_line(color = "grey20", linewidth = 0.5),
-    axis.text = element_text(color = "grey20", size = 9),
-    axis.title = element_text(face = "bold", color = "grey20", size = 10),
-    axis.title.x = element_text(margin = margin(t = 10)),
-    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.text = element_text(color = "grey20", size = 10),
+    axis.title = element_text(face = "bold", color = "grey20", size = 13),
+    axis.title.x = element_blank(),
+    axis.text.x = element_text(angle = 30, hjust = 1),
     axis.title.y = element_text(margin = margin(r = 10)) 
   )
 
 print(plot_transfer_order)
 
-ggsave(here("res/plots/task_memory_by_trf_order.png"), plot = plot_transfer_order, width = 7, height = 5)
+ggsave(here("res/plots/task_memory_by_trf_order.png"), plot = plot_transfer_order, width = 6, height = 4)
 
 ```
 
@@ -2015,7 +2142,7 @@ complete_memory$complete_pos <- factor(complete_memory$complete_pos,  # keeps th
 # now plot
 x_axis_lab <- 'complete transfer position'
 y_axis_lab <- 'n correct'
-these_cols <- wes_palette("AsteroidCity3")[c(1, 2, 4)]
+these_cols <- c("#004aad", "#00bf63", "#ff66c4")
 jitter_pos <- position_jitterdodge(jitter.width = 0.01) 
 
 complete_recency <- ggplot(data = complete_memory, 
@@ -2053,8 +2180,6 @@ print(complete_recency)
 
 ggsave(here("res/plots/task_memory_recency.png"), plot = complete_recency, width = 7, height = 5)
 
-
-
 ```
 
 ```{r complete recency anova, echo=FALSE, warning=FALSE}
@@ -2074,106 +2199,28 @@ print(complete_recency_anova)
 ```
 
 
-#### Task memory by error type
-We can also get the proportion of setting setting errors participants are making for each group.
-
-```{r task memory proportion set errors, echo = FALSE, warning = FALSE}
-
-# pivoting the data into long form
-memory_errors <- task_memory_data %>% 
-  pivot_longer(cols = c(proportion_setErr1, proportion_setErr2, proportion_genErr1, 
-                        proportion_genErr2),
-               names_to = 'error_type',
-               values_to = 'proportion_errors') %>% 
-  select(sub, train_type, mean_locs_correct, error_type, proportion_errors)
-
-error <- rep(c('SetErr', 'SetErr', 'GenErr', 'GenErr'), times = 96)
-learned_task <- rep(c("A", "B", "A", "B"), times = 96)
-
-memory_errors$error_type <- as.factor(memory_errors$error_type)
-levels(memory_errors$error_type) <- c("GenErrorA", "GenErrorB", "SetErrorA", "SetErrorB")
-memory_errors <- cbind(memory_errors, learned_task, error)
-
-
-```
-
-```{r task memory errors, echo=FALSE, warning=FALSE, fig.show='hold', out.width="49%"}
-
-# plotting errors for each sub, and each learned task they made an error on
-x_axis_lab <- 'error type'
-y_axis_lab <- 'proportion of total errors'
-these_cols <- wes_palette("AsteroidCity3")[c(1, 4)]
-jitter_pos <- position_jitterdodge(jitter.width = 0.01) 
-
-plot_memory_errors <- ggplot(data = memory_errors, 
-                mapping = aes(x = error, y = proportion_errors, colour = error, fill = error)) +
-  geom_point(aes(group = sub),
-             alpha = 0.3, 
-             size = 1.5,
-             position = jitter_pos) +
-  stat_summary(fun = mean, geom = "point", shape = 21, size = 2, 
-               colour = "grey20", fill = "grey20") +
-  stat_summary(fun = mean, geom = "line", 
-               aes(group = 1), 
-               colour = 'grey20', 
-               linewidth = 0.5)+
-  labs(x = x_axis_lab, y = y_axis_lab) +
-  theme_classic(base_size = 16) +
-  scale_fill_manual(values = these_cols) +
-  scale_colour_manual(values = these_cols) +
-  facet_wrap(~ train_type) +
-  theme(
-    legend.position = "none",
-    strip.background = element_rect(fill = "#f0e6da", colour = "NA"),
-    strip.text = element_text(face = "bold", size = 9),
-    axis.line.x = element_line(color = "grey20", linewidth = 0.5),
-    axis.line.y = element_line(color = "grey20", linewidth = 0.5),
-    axis.ticks = element_line(color = "grey20", linewidth = 0.5),
-    axis.text = element_text(color = "grey20", size = 9),
-    axis.title = element_text(face = "bold", color = "grey20", size = 10),
-    axis.title.x = element_text(margin = margin(t = 10)),
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    axis.title.y = element_text(margin = margin(r = 10)) 
-  )
-
-print(plot_memory_errors)
-
-```
-
-Is there an interaction between error type and train type on task memory?
-
-```{r task memory errors anova, echo=FALSE, warning=FALSE}
-
-# means for each condition
-memory_errors_summ <- memory_errors %>% 
-  filter(!is.na(proportion_errors)) %>% 
-  group_by(train_type, error) %>% 
-  summarise(n = n(),
-            error_proportion = mean(proportion_errors)) 
-
-# fit the data to an ANOVA model
-memory_error_anova <- aov_ez('sub',
-                         'proportion_errors', 
-                         memory_errors, 
-                         between = 'train_type',
-                         within = 'error')
-
-print(memory_error_anova)
-
-```
-
 ## Task Memory Summary
-We compared memory for the two learned task sets and found no differences between groups. This suggests that the training manipulation did not affect participants meory of the two task sets. Memory was also not affected by the order of conditions during the transfer test stage. That is performing complete transfer before partial transfer did not affect memory of doors to a different extent than if complete was performed after partial transfer. There was also no recency effect of performing complete 1st, 2nd or 3rd in memory of the relevant target locations.
+We compared memory for the two learned task sets and found no differences between groups. This suggests that the training manipulation did not affect participants memory of the two task sets. Memory was also not affected by the order of conditions during the transfer test stage. That is performing complete transfer before partial transfer did not affect memory of doors to a different extent than if complete was performed after partial transfer. There was also no recency effect of performing complete 1st, 2nd or 3rd in memory of the relevant target locations.
 
 Does this suggest that both groups were equally able to distinguish the two task sets? i.e., did we sucessfully manipulate task representations using training?
 
-## Other individual differences
-To determine whether its worthwhile performing the individual difference data analyses, we can look at the variance in the data for those measures
+
+## Individual differences
+
+To determine whether its worthwhile performing the individual difference data analyses, we can look at the variance in the data for those measures.
+
+```{r individual diff dataframes, include=FALSE}
+
+# load dataframes
+ind_diffs <- read.csv(here("res/all_individual_differences.csv"))
+
+```
 
 ### Spatial WM (corsi)
+
 Here, I am visualising the spread of the data for the forward and backward version of the corsi task.
 
-```{r spatial WM, echo=FALSE}
+```{r spatial WM, echo=FALSE, fig.show='hold', out.width="49%"}
 
 x <- ind_diffs$max_fwd_corsi[is.finite(ind_diffs$max_fwd_corsi)]
 y <- ind_diffs$max_bwd_corsi[is.finite(ind_diffs$max_bwd_corsi)]
@@ -2196,9 +2243,10 @@ spatialWM_desc <- ind_diffs %>%
 ```
 
 ### Verbal WM (digit span)
-Here, I am visualising the spread of the data
 
-```{r spatial WM, echo=FALSE}
+Here, I am visualising the spread of the digit span data.
+
+```{r verbal WM, echo=FALSE, fig.show='hold', out.width="49%"}
 
 x <- ind_diffs$max_fw_digits
 y <- ind_diffs$max_bw_digits
@@ -2207,6 +2255,7 @@ hist(x,
      main = "forward verbal WM",
      xlab = "digit span",
      col = "lightblue")
+
 hist(y,
      main = "backwards spatial WM",
      xlab = "digit span",
@@ -2226,228 +2275,361 @@ verbalWM_desc <- ind_diffs %>%
 
 ```
 
-## Exploratory analyses
-=======
-### Regressing WM measures on TE, Task jumps, and rule learning ratings
-To determine whether spatial working memory may underly how routine people are, we can regress the spatial and verbal working memory measures onto transition entropy, task jumps and rule learning rating from the acqusition stage separately.
+### Does working memory predict the formation of routines? Regressing WM measures on TE, Task jumps, and rule learning ratings
 
-```{r ind diff data for regression, echo=FALSE, warnings=FALSE}
+To determine whether spatial working memory may underly how routine people are, we can regress the spatial and verbal working memory measures onto transition entropy, task jumps and rule learning rating from the acqusition stage in separate multiple regression analyses.
 
-# now, getting task jumps averages across all trials.
+```{r checking for normality, echo=FALSE, warnings=FALSE}
+
+# loading average jumps and rule learning data
 average_jumps <- read.csv(here("res/training_average_jumps.csv"))
+jumps_transforms <- average_jumps %>%  # transforming task jumps data
+  mutate(sqrt_jumps = sqrt(jumps),
+         log_jumps = log(jumps + 0.01)) # use log transform when looking at task jumps
+
+rule_learning_transforms <- ind_diffs %>%  # transformations are not helpful. will use scores as is.
+  mutate(sqrt_rule_acq = sqrt(acq_rule_score),
+         log_rule_acq = log(acq_rule_score))
+
+# run this code to get qq plot
+ggplot(jumps_transforms, aes(sample = log_jumps)) + # change data frame and variable as required
+  stat_qq() +
+  stat_qq_line() +
+  theme_minimal()
+
+```
+
+```{r getting regression data, echo=FALSE, warning=FALSE}
 
 # adding transition entropy and jumps data to ind_diffs file to run regression
-regression_data <- inner_join(ind_diffs, average_jumps, by = c('sub', 'train_type'))
+regression_data <- inner_join(ind_diffs, jumps_transforms, by = c('sub', 'train_type'))
 regression_data <- inner_join(regression_data, training_entropy, by = c('sub', 'train_type'))
 
 # removing participants with missing spatial working memory data
 regression_data <- regression_data %>% 
+  filter(is.finite(max_fwd_corsi) & is.finite(max_bwd_corsi)) %>% 
+  select(-task_config, -ncorrectA, -ncorrectB, -mean_locs_correct, -acq_open_resp, 
+         -train_rule_score, -train_open_resp)
+
+write.csv(regression_data, file = "res/regression_data.csv", row.names = FALSE)
+
+```
+
+Let's also see the correlation between the variable in this data set.
+```{r ind diffs cor, echo=FALSE, warning=FALSE}
+
+vars <- regression_data %>% 
+  select(-sub, -train_type, - sqrt_jumps, -log_jumps)
+
+corr_mat <- cor(vars)
+print(corr_mat)
+
+```
+
+
+Now, we will perform **three separate regressions**.
+
+1. Transition Entropy
+
+The model for this regression is significant, but follow up tests of individual predictors using the Benjamin-Hochberg procedure revealed no significant results. Data checked for multicollinearity, using variance inflation factors (VIF) and tolerance values which are all at an acceptable level. 
+
+```{r regressing ind diffs on TE, echo=FALSE, warning=FALSE, fig.show='hold', out.width="24.9%"}
+
+# TE as criterion
+TE <- lm(mean_entropy ~ max_fwd_corsi + max_bwd_corsi + max_fw_digits + max_bw_digits,
+         data=regression_data)
+summary(TE) # model is significant
+vif <- vif(TE)
+tolerance <- 1/vif # tolerance is all > 0.1 
+
+TE_coefs <- coef(TE)
+
+plot(TE)
+
+```
+
+```{r TE FDR, echo=FALSE, warnings=FALSE}
+
+raw_p <- c(0.0583, 0.06, 0.4990, 0.1691) 
+
+fdr_p <- p.adjust(raw_p, method = "fdr") 
+print(fdr_p) # no predictors are significant, all p's > 0.05
+
+```
+
+2. Task Jumps
+
+The model for this regression is significant. Follow up tests of individual predictors using the Benjamin Hochberg procedure revealed no significant predictors. Data checked for multicollinearity, using variance inflation factors (VIF) and tolerance values which are at an acceptable level.
+
+```{r regress ind diffs on TE, echo=FALSE, warning=FALSE, fig.show='hold', out.width="24.9%"}
+
+# Task jumps as criterion
+jumps <- lm(log_jumps ~ max_fwd_corsi + max_bwd_corsi + max_fw_digits + max_bw_digits, 
+            data = regression_data)
+summary(jumps) # model is significant
+vif <- vif(jumps)
+tolerance <- 1/vif # tolerance is all > 0.1 
+
+plot(jumps)
+
+```
+
+```{r jumps FDR, echo=FALSE, warnings=FALSE}
+
+raw_p <- c(0.1195, 0.0187, 0.3171, 0.0281) 
+
+fdr_p <- p.adjust(raw_p, method = "fdr") 
+print(fdr_p) # none are significant with log transformation, all p's > 0.05
+
+```
+
+
+3. Rule learning ratings (task acquisition stage)
+
+This model did not produce a significant result. No follow up tests of individual predictors were performed.
+
+```{r regressing ind diffs on rule learning scores, echo=FALSE, warning=FALSE, fig.show='hold', out.width="24.9%"}
+
+# rule learning ratings
+acq_rule_score <- lm(acq_rule_score ~ max_fwd_corsi + max_bwd_corsi + max_fw_digits + max_bw_digits,
+                     data = regression_data)
+summary(acq_rule_score) # model is not significant
+
+vif <- vif(acq_rule_score)
+tolerance <- 1/vif
+
+plot(acq_rule_score)
+
+```
+
+I will also perform run these three regression analysis in **a multivariate multiple regression** with a follow up MANOVA test to better understand how each predictor contributed to common variance between TE and task jumps. None of the predictors come out significant in the MANOVA model.
+
+```{r multivariate multiple regression, echo=FALSE, warning=FALSE}
+
+# multivariate multiple regression
+mlm1 <- lm(cbind(mean_entropy, jumps) ~ max_fwd_corsi +
+             max_bwd_corsi + max_fw_digits + max_bw_digits, 
+           data = regression_data)
+summary(mlm1)
+
+Anova(mlm1) # all predictors are insignificant, all p's >0.05 
+
+```
+
+```{r MANOVA FDR adjustment, echo=FALSE, warnings=FALSE}
+
+raw_p <- c(0.1326, 0.0857, 0.1654, 0.0376) 
+
+fdr_p <- p.adjust(raw_p, method = "fdr") 
+print(fdr_p) # none are significant, all p's > 0.05
+
+```
+
+
+Now, let run the same analyses with Group (train_type) added as a predictor.
+
+1. Transition Entropy with Group
+
+The model for this regression is **still** significant and in line with the previous analysis, follow up tests of individual predictors using the Benjamin-Hochberg procedure revealed no significant results. 
+
+```{r regressing ind diffs on TE w/ group, echo=FALSE, warning=FALSE, fig.show='hold', out.width="24.9%"}
+
+# TE as criterion
+TE <- lm(mean_entropy ~  train_type + max_fwd_corsi + max_bwd_corsi + max_fw_digits + max_bw_digits,
+         data=regression_data)
+summary(TE) # model is significant
+vif <- vif(TE)
+tolerance <- 1/vif # tolerance is all > 0.1 
+
+plot(TE)
+
+```
+
+
+```{r TE FDR w/ group, echo=FALSE, warnings=FALSE}
+
+raw_p <- c(0.768609, 0.063980, 0.067783, 0.493239, 0.165831)
+
+fdr_p <- p.adjust(raw_p, method = "fdr") # all p > 0.05
+print(fdr_p) # no predictors are significant, all p's > 0.05
+
+``` 
+
+2. Task jumps with Group
+
+The model for this regression is **still** significant. Follow up tests of individual predictors using the Benjamin Hochberg procedure revealed backward digit span, **and group** to be significant predictors of performance of task jumps. 
+
+```{r regressing ind diffs on TExgroup, echo=FALSE, warning=FALSE, fig.show='hold', out.width="24.9%"}
+
+# Task jumps as criterion
+jumps <- lm(log_jumps ~ train_type + max_fwd_corsi + max_bwd_corsi + max_fw_digits + max_bw_digits, 
+            data = regression_data)
+summary(jumps) # model is significant
+vif <- vif(jumps)
+tolerance <- 1/vif # tolerance is all > 0.1 
+
+plot(jumps)
+
+```
+
+```{r jumps FDR w/group, echo=FALSE, warning=FALSE}
+
+raw_p <- c(0.000183, 0.176494, 0.036139, 0.209077, 0.008194) 
+
+fdr_p <- p.adjust(raw_p, method = "fdr") 
+print(fdr_p) # train_type and max_bw_digits are significant
+
+```
+
+
+3. Rule learning scale with Group (task acquisition stage)
+
+This model is not significant.
+
+```{r regressing ind diffs on rule learning scores w/ group, echo=FALSE, warning=FALSE, fig.show='hold', out.width="24.9%"}
+
+# rule learning ratings
+acq_rule_score <- lm(acq_rule_score ~ train_type + max_fwd_corsi + max_bwd_corsi + max_fw_digits +
+                       max_bw_digits,
+                    data = regression_data)
+summary(acq_rule_score) # model is not significant
+
+vif <- vif(acq_rule_score)
+tolerance <- 1/vif
+
+plot(acq_rule_score)
+
+```
+
+And now, using **a multivariate multiple regression analysis** which includes group. Group and backwards digit span are significant predictors of common variance between TE and jumps. Interestingly, it is verbal working memory that contributes to TE and jumps, rather than spatial working memory.
+
+```{r multivariate multiple regression with group, echo=FALSE, warning=FALSE}
+
+# multivariate multiple regression
+mlm2 <- lm(cbind(mean_entropy, log_jumps) ~ train_type + max_fwd_corsi +
+             max_bwd_corsi + max_fw_digits + max_bw_digits, 
+           data = regression_data)
+summary(mlm2)
+
+Anova(mlm2) # train type and backwards digit span are significant
+
+```
+
+```{r MANOVA with group FDR adjustment, echo=FALSE, warning=FALSE}
+
+raw_p <- c(0.0000001431, 0.17619, 0.11019, 0.39149, 0.01395) 
+
+fdr_p <- p.adjust(raw_p, method = "fdr") 
+print(fdr_p) # train type and bwd_digits span is significant.
+
+```
+
+
+### Does working memory performance predict performance on Transfer?
+
+Given that working memory affects performance on transition entropy and task jumps, we can also examine whether working memory also affects transfer. To do this, I will regress Group and all spatial and verbal working memory measures onto accuracy and learn onset using a multivariate multiple regression.
+
+1. Accuracy
+This model is not significant.
+
+```{r accuracy wide form, echo=FALSE, warning=FALSE}
+
+acc_wide <- all_transfer_data %>% 
+  select(sub, train_type, transfer, mean_acc) %>% 
+  pivot_wider(names_from = transfer, values_from = mean_acc)
+
+acc_regression_data <- inner_join(regression_data, acc_wide, by = c('sub', 'train_type'))
+
+```
+
+Without Group:
+```{r regressing ind diffs on accuracy, echo=FALSE, warning=FALSE}
+
+# performing multivariate multiple regression for transfer accuracy
+mlm1 <- lm(cbind(Novel, Partial, Complete) ~ max_fwd_corsi +
+             max_bwd_corsi + max_fw_digits + max_bw_digits, 
+           data = acc_regression_data)
+summary(mlm1) # this model is not significant
+
+```
+
+
+With Group:
+
+```{r regressing ind diffs on accuracy with group, echo=FALSE, warning=FALSE}
+
+# performing multivariate multiple regression for transfer accuracy
+mlm1 <- lm(cbind(Novel, Partial, Complete) ~ train_type + max_fwd_corsi +
+             max_bwd_corsi + max_fw_digits + max_bw_digits, 
+           data = acc_regression_data)
+summary(mlm1) # this model is not significant
+
+```
+
+
+2. Learning onset
+This model is not significant.
+
+```{r learn onsest wide form, echo=FALSE, warning=FALSE}
+
+onset_wide <- learn_onset_data %>% 
+  select(sub, train_type, transfer, k4_onset) %>% 
+  pivot_wider(names_from = transfer, values_from = k4_onset)
+
+onset_regression_data <- inner_join(regression_data, onset_wide, by = c('sub', 'train_type'))
+
+```
+
+Without Group:
+
+```{r regressing ind diffs on learn onset, echo=FALSE, warning=FALSE}
+
+# performing multivariate multiple regression for transfer accuracy
+mlm1 <- lm(cbind(Novel, Partial, Complete) ~max_fwd_corsi +
+             max_bwd_corsi + max_fw_digits + max_bw_digits, 
+           data = onset_regression_data)
+summary(mlm1) # this model is also not significant
+
+```
+
+With Group:
+
+```{r regressing ind diffs on learn onset with group, echo=FALSE, warning=FALSE}
+
+# performing multivariate multiple regression for transfer accuracy
+mlm1 <- lm(cbind(Novel, Partial, Complete) ~ train_type + max_fwd_corsi +
+             max_bwd_corsi + max_fw_digits + max_bw_digits, 
+           data = onset_regression_data)
+summary(mlm1) # this model is also not significant
+
+```
+
+In summary, the working memory measures and type of training **did not** affect transfer accuracy or learning onset.
+
+
+### Is there an interaction between group, working memory and routiness on learning transfer? Multivariate analysis of individual differences, training contexts and transition entropy on learning transfer
+
+As per the preregistration, we can determine whether there is a relationship between working memory, the stability of training contexts and routines on learning transfer. To do this I will perform a multivariate multiple regression of all rule learning ratings, spatial working memory scores, transition entropy, and group on bias scores for accuracy and learning onset.
+
+```{r transfer data wrangling, echo=FALSE, warning=FALSE}
+
+regression_data <- inner_join(ind_diffs, training_entropy, by = c('sub', 'train_type')) %>% 
+  select(-acq_open_resp, -train_open_resp)
+regression_data <- inner_join(regression_data, bias_scores, by = c('sub', 'train_type')) %>% 
+  select(-ses, -task_set, -task_config, - mean_locs_correct) %>% 
   filter(is.finite(max_fwd_corsi) & is.finite(max_bwd_corsi))
 
 ```
 
+```{r transfer MANOVA, echo=FALSE, warning=FALSE}
 
-```{r regressing ind diffs, echo=FALSE, warnings=FALSE}
+mlm1 <- lm(cbind(bias_ovr_novel, bias_ovr_complete) ~ train_type + max_fwd_corsi +
+             max_bwd_corsi + max_fw_digits + max_bw_digits + acq_rule_score + mean_entropy,
+           data = regression_data)
+summary(mlm1)
 
-# TE as criterion
-TE <- lm(mean_entropy ~ max_fwd_corsi+max_bwd_corsi+max_fw_digits+max_bw_digits, data=regression_data)
-summary(TE) # model is significant
-vif <- vif(TE)
-tolerance <- 1/vif # tolerance is all > 0.1 - need to perform post-hoc tests of coefficients using scheffe adjustment
-
-# Task jumps as criterion
-jumps <- lm(jumps ~ max_fwd_corsi+max_bwd_corsi+max_fw_digits+max_bw_digits, data=regression_data)
-summary(jumps) # model is significant
-vif <- vif(jumps)
-tolerance <- 1/vif # tolerance is all > 0.1 - perform post-hoc-tests of coefficients as above
-
-# rule learning ratings
-acq_rule_score <- lm(acq_rule_score ~ max_fwd_corsi+max_bwd_corsi+max_fw_digits+max_bw_digits, data=regression_data)
-summary(acq_rule_score) # not significant 
-vif <- vif(acq_rule_score)
-tolerance <- 1/vif
+Anova(mlm1)
 
 ```
 
-
-## Additional Analyses
->>>>>>> f330f780d823eda72276f461c384746cf37ff274
-### Task jumps over time 
-We can also look at task jumps overtime.
-
-```{r task jumps by epoch, echo=FALSE, warning=FALSE, fig.show='hold', out.width="49%"}
-
-jumps_by_epoch <- ggplot(training_by_epoch, aes(x = epoch, y = group_task_jumps)) +
-  geom_point(alpha = 0.7) +
-  geom_line() +
-  facet_wrap(~ train_type) +
-  labs(x = "Epoch", y = "Task Jumps") +
-  theme_classic() 
-
-print(jumps_by_epoch)
-
-```
-
-
-### Transfer Accuracy by First Transfer Condition
-To determine whether performance one one transfer condition affected performance on subsequent transfer conditions, we can plot the accuracy data based on the first transfer condition people received.
-
-```{r accuracy by first transfer condition, echo = FALSE, warning=FALSE, fig.show='hold', out.width="49%"}
-
-all_transfer_data$first_transfer <- factor(
-  all_transfer_data$first_transfer,
-  levels = c("novel first", "partial first", "complete first")
-)
-all_transfer_data$transfer <- factor(
-  all_transfer_data$transfer,
-  levels = c("Novel", "Partial", "Complete")
-)
-
-data <- all_transfer_data
-iv <- all_transfer_data$transfer
-x_axis_lab <- 'Transfer type'
-dv <- all_transfer_data$mean_acc
-y_axis_lab <- 'Accuracy'
-these_cols <- c("#8da0cb", "#e78ac3", "#a6d854")
-
-jitter_pos <- position_jitterdodge(jitter.width = 0.01) 
-  
-accuracy_by_first_trf <- ggplot(data = data, 
-                mapping = aes(x = iv, y = dv, colour = iv, fill = iv)) +
-  geom_point(aes(group = sub), 
-             alpha = 0.3, 
-             size = 1.5,
-             position = jitter_pos) +
-  geom_line(aes(group = sub), 
-            alpha = 0.3, 
-            colour = "grey",
-            position = jitter_pos) +
-  geom_boxplot(width = 0.2, 
-               alpha = 0.8, 
-               linewidth = 0.3, 
-               colour = 'grey20', 
-              outlier.shape = NA) +
-  stat_summary(fun = mean, geom = "point", shape = 23, size = 2, 
-               colour = "grey20", fill = "grey20") +
-  scale_y_continuous(limits = c(0.4, 1), breaks = seq(0.4, 1, by = 0.1)) +
-  labs(x = x_axis_lab, y = y_axis_lab) +
-  theme_classic(base_size = 16) +
-  scale_fill_manual(values = these_cols) +
-  scale_colour_manual(values = these_cols) +
-  facet_grid(~first_transfer*train_type) +
-  theme(
-    legend.position = "none",
-    strip.background = element_rect(fill = "#f0e6da", colour = "NA"),
-    strip.text = element_text(face = "bold", size = 9),
-    axis.line.x = element_line(color = "grey20", linewidth = 0.5),
-    axis.line.y = element_line(color = "grey20", linewidth = 0.5),
-    axis.ticks = element_line(color = "grey20", linewidth = 0.5),
-    axis.text = element_text(color = "grey20", size = 9),
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    axis.title = element_text(face = "bold", color = "grey20", size = 10),
-    axis.title.x = element_text(margin = margin(t = 10)),
-    axis.title.y = element_text(margin = margin(r = 10)) 
-  )
-
-print(accuracy_by_first_trf)
-
-
-```
-
-
-We can determine whether order affects performance on transfer by assessing for a three way interaction between first transfer condition, group, and transfer condition.
-
-**Interaction is not significant**
-
-```{r order interaction, echo=FALSE, warning=FALSE}
-
-# fit the data to an ANOVA model
-order_anova <- aov_ez('sub',
-                      'mean_acc', 
-                      all_transfer_data, 
-                      between = c("first_transfer", 'train_type'),
-                      within = 'transfer')
-
-print(order_anova)
-
-```
-
-
-### Transfer Accuracy by Task-set
-
-We can also examine whether similarity in the two learned task-sets influences performance on each of the transfer conditions. It may be that when two task sets are more similar (i.e., when there is more overlap in two task-sets), participants are better able to perform partial transfer. The following plot provides an illustration of any differences between the four sets of Task A and B that were given to participants. However, more work would be needed to quantify how similar two task-sets are.
-
-**There is no interaction between task-set configuration, transfer and group.**
-
-```{r transfer by task-set, echo=FALSE, warning=FALSE, fig.show='hold', out.width="49%"}
-
-all_transfer_data$transfer <- factor(
-  all_transfer_data$transfer,
-  levels = c("Novel", "Partial", "Complete")
-)
-
-data <- all_transfer_data
-iv <- all_transfer_data$transfer
-x_axis_lab <- 'Transfer type'
-dv <- all_transfer_data$mean_acc
-y_axis_lab <- 'Accuracy'
-these_cols <- c("#8da0cb", "#e78ac3", "#a6d854")
-
-jitter_pos <- position_jitterdodge(jitter.width = 0.01) 
-  
-accuracy_by_taskset <- ggplot(data = data, 
-                mapping = aes(x = iv, y = dv, colour = iv, fill = iv)) +
-  geom_point(aes(group = sub), 
-             alpha = 0.3, 
-             size = 1.5,
-             position = jitter_pos) +
-  geom_line(aes(group = sub), 
-            alpha = 0.3, 
-            colour = "grey",
-            position = jitter_pos) +
-  geom_boxplot(width = 0.2, 
-               alpha = 0.8, 
-               linewidth = 0.3, 
-               colour = 'grey20', 
-              outlier.shape = NA) +
-  stat_summary(fun = mean, geom = "point", shape = 23, size = 2, 
-               colour = "grey20", fill = "grey20") +
-  scale_y_continuous(limits = c(0.4, 1), breaks = seq(0.4, 1, by = 0.1)) +
-  labs(x = x_axis_lab, y = y_axis_lab) +
-  theme_classic(base_size = 16) +
-  scale_fill_manual(values = these_cols) +
-  scale_colour_manual(values = these_cols) +
-  facet_grid(~task_set*train_type) +
-  theme(
-    legend.position = "none",
-    strip.background = element_rect(fill = "#f0e6da", colour = "NA"),
-    strip.text = element_text(face = "bold", size = 9),
-    axis.line.x = element_line(color = "grey20", linewidth = 0.5),
-    axis.line.y = element_line(color = "grey20", linewidth = 0.5),
-    axis.ticks = element_line(color = "grey20", linewidth = 0.5),
-    axis.text = element_text(color = "grey20", size = 9),
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    axis.title = element_text(face = "bold", color = "grey20", size = 10),
-    axis.title.x = element_text(margin = margin(t = 10)),
-    axis.title.y = element_text(margin = margin(r = 10)) 
-  )
-
-print(accuracy_by_taskset)
-
-
-```
-
-
-```{r task-set interaction, echo=FALSE, warning=FALSE}
-
-# fit the data to an ANOVA model
-task_set_anova <- aov_ez('sub',
-                      'mean_acc', 
-                      all_transfer_data, 
-                      between = c("task_set", 'train_type'),
-                      within = 'transfer')
-
-print(task_set_anova)
-
-```
 
