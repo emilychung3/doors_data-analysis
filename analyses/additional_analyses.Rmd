@@ -1,0 +1,302 @@
+---
+title: "additional_analyses"
+author: "Emily Chung"
+date: "2026-04-21"
+output: html_document
+---
+## Document summary
+This document contains additional plots and analyses which are entirely unrelated to the planned analysis of this study.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list = ls())
+```
+
+
+```{r libraries, include=FALSE}
+library(here) # setting working directory to the project directory
+library(tidyverse)
+library(dplyr)
+
+library(ggplot2) # libraries for plotting data
+library(gghalves)
+
+library(afex) # libraries for performing planned contrast analyses
+library(emmeans)
+afex_options(emmeans_model = "multivariate")
+
+```
+
+### Task jumps over time 
+Here, I am plotting task jumps overtime. Task jumps is averaged across trials in 8 epochs, each containing 40 trials.
+
+```{r task jumps by epoch, echo=FALSE, warning=FALSE, fig.show='hold', out.width="49%"}
+
+training_by_epoch <- read.csv(here("res/training_by_epoch.csv"))
+
+jumps_by_epoch <- ggplot(training_by_epoch, aes(x = epoch, y = group_task_jumps)) +
+  geom_point(alpha = 0.7) +
+  geom_line() +
+  facet_wrap(~ train_type) +
+  labs(x = "Epoch", y = "Task Jumps") +
+  theme_classic() 
+
+print(jumps_by_epoch)
+
+```
+
+
+### Transfer Accuracy by First Transfer Condition
+To determine whether performance one one transfer condition affected performance on subsequent transfer conditions, I have also plotted accuracy for the first transfer condition people received.
+
+```{r accuracy by first transfer condition, echo = FALSE, warning=FALSE, fig.show='hold', out.width="49%"}
+
+all_transfer_data <- read.csv(here("res/all_transfer_data.csv"))
+
+all_transfer_data$first_transfer <- factor(
+  all_transfer_data$first_transfer,
+  levels = c("novel first", "partial first", "complete first")
+)
+all_transfer_data$transfer <- factor(
+  all_transfer_data$transfer,
+  levels = c("Novel", "Partial", "Complete")
+)
+
+data <- all_transfer_data
+iv <- all_transfer_data$transfer
+x_axis_lab <- 'Transfer type'
+dv <- all_transfer_data$mean_acc
+y_axis_lab <- 'Accuracy'
+these_cols <- c("#8da0cb", "#e78ac3", "#a6d854")
+
+jitter_pos <- position_jitterdodge(jitter.width = 0.01) 
+  
+accuracy_by_first_trf <- ggplot(data = data, 
+                mapping = aes(x = iv, y = dv, colour = iv, fill = iv)) +
+  geom_point(aes(group = sub), 
+             alpha = 0.3, 
+             size = 1.5,
+             position = jitter_pos) +
+  geom_line(aes(group = sub), 
+            alpha = 0.3, 
+            colour = "grey",
+            position = jitter_pos) +
+  geom_boxplot(width = 0.2, 
+               alpha = 0.8, 
+               linewidth = 0.3, 
+               colour = 'grey20', 
+              outlier.shape = NA) +
+  stat_summary(fun = mean, geom = "point", shape = 23, size = 2, 
+               colour = "grey20", fill = "grey20") +
+  scale_y_continuous(limits = c(0.4, 1), breaks = seq(0.4, 1, by = 0.1)) +
+  labs(x = x_axis_lab, y = y_axis_lab) +
+  theme_classic(base_size = 16) +
+  scale_fill_manual(values = these_cols) +
+  scale_colour_manual(values = these_cols) +
+  facet_grid(~first_transfer*train_type) +
+  theme(
+    legend.position = "none",
+    strip.background = element_rect(fill = "#f0e6da", colour = "NA"),
+    strip.text = element_text(face = "bold", size = 9),
+    axis.line.x = element_line(color = "grey20", linewidth = 0.5),
+    axis.line.y = element_line(color = "grey20", linewidth = 0.5),
+    axis.ticks = element_line(color = "grey20", linewidth = 0.5),
+    axis.text = element_text(color = "grey20", size = 9),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.title = element_text(face = "bold", color = "grey20", size = 10),
+    axis.title.x = element_text(margin = margin(t = 10)),
+    axis.title.y = element_text(margin = margin(r = 10)) 
+  )
+
+print(accuracy_by_first_trf)
+
+
+```
+
+
+We can determine whether order affects performance on transfer by assessing for a three way interaction between first transfer condition, group, and transfer condition.
+
+**Interaction is not significant**
+
+```{r order interaction, echo=FALSE, warning=FALSE}
+
+# fit the data to an ANOVA model
+order_anova <- aov_ez('sub',
+                      'mean_acc', 
+                      all_transfer_data, 
+                      between = c("first_transfer", 'train_type'),
+                      within = 'transfer')
+
+print(order_anova)
+
+```
+
+
+### Transfer Accuracy by Task-set
+
+We can also examine whether similarity in the two learned task-sets influences performance on each of the transfer conditions. It may be that when two task sets are more similar (i.e., when there is more overlap in two task-sets), participants are better able to perform partial transfer. The following plot provides an illustration of any differences between the four sets of Task A and B that were given to participants. However, more work would be needed to quantify how similar two task-sets are.
+
+**There is no interaction between task-set configuration, transfer and group.**
+
+```{r transfer by task-set, echo=FALSE, warning=FALSE, fig.show='hold', out.width="49%"}
+
+all_transfer_data$transfer <- factor(
+  all_transfer_data$transfer,
+  levels = c("Novel", "Partial", "Complete")
+)
+
+data <- all_transfer_data
+iv <- all_transfer_data$transfer
+x_axis_lab <- 'Transfer type'
+dv <- all_transfer_data$mean_acc
+y_axis_lab <- 'Accuracy'
+these_cols <- c("#8da0cb", "#e78ac3", "#a6d854")
+
+jitter_pos <- position_jitterdodge(jitter.width = 0.01) 
+  
+accuracy_by_taskset <- ggplot(data = data, 
+                mapping = aes(x = iv, y = dv, colour = iv, fill = iv)) +
+  geom_point(aes(group = sub), 
+             alpha = 0.3, 
+             size = 1.5,
+             position = jitter_pos) +
+  geom_line(aes(group = sub), 
+            alpha = 0.3, 
+            colour = "grey",
+            position = jitter_pos) +
+  geom_boxplot(width = 0.2, 
+               alpha = 0.8, 
+               linewidth = 0.3, 
+               colour = 'grey20', 
+              outlier.shape = NA) +
+  stat_summary(fun = mean, geom = "point", shape = 23, size = 2, 
+               colour = "grey20", fill = "grey20") +
+  scale_y_continuous(limits = c(0.4, 1), breaks = seq(0.4, 1, by = 0.1)) +
+  labs(x = x_axis_lab, y = y_axis_lab) +
+  theme_classic(base_size = 16) +
+  scale_fill_manual(values = these_cols) +
+  scale_colour_manual(values = these_cols) +
+  facet_grid(~task_set*train_type) +
+  theme(
+    legend.position = "none",
+    strip.background = element_rect(fill = "#f0e6da", colour = "NA"),
+    strip.text = element_text(face = "bold", size = 9),
+    axis.line.x = element_line(color = "grey20", linewidth = 0.5),
+    axis.line.y = element_line(color = "grey20", linewidth = 0.5),
+    axis.ticks = element_line(color = "grey20", linewidth = 0.5),
+    axis.text = element_text(color = "grey20", size = 9),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.title = element_text(face = "bold", color = "grey20", size = 10),
+    axis.title.x = element_text(margin = margin(t = 10)),
+    axis.title.y = element_text(margin = margin(r = 10)) 
+  )
+
+print(accuracy_by_taskset)
+
+
+```
+
+
+```{r task-set interaction, echo=FALSE, warning=FALSE}
+
+# fit the data to an ANOVA model
+task_set_anova <- aov_ez('sub',
+                      'mean_acc', 
+                      all_transfer_data, 
+                      between = c("task_set", 'train_type'),
+                      within = 'transfer')
+
+print(task_set_anova)
+
+```
+
+
+### Task memory by error type
+We can also get the proportion of setting setting errors participants are making for each group. This analysis should be taken with a grain of salf because it the way a setting error and general error is operationalised for the task memory test is complicated.
+
+```{r task memory proportion set errors, echo = FALSE, warning = FALSE}
+
+task_memory_data <- read.csv(here("res/task_memory_summary.csv"))
+
+# pivoting the data into long form
+memory_errors <- task_memory_data %>% 
+  pivot_longer(cols = c(proportion_setErr1, proportion_setErr2, proportion_genErr1, 
+                        proportion_genErr2),
+               names_to = 'error_type',
+               values_to = 'proportion_errors') %>% 
+  select(sub, train_type, mean_locs_correct, error_type, proportion_errors)
+
+error <- rep(c('SetErr', 'SetErr', 'GenErr', 'GenErr'), times = 96)
+learned_task <- rep(c("A", "B", "A", "B"), times = 96)
+
+memory_errors$error_type <- as.factor(memory_errors$error_type)
+levels(memory_errors$error_type) <- c("GenErrorA", "GenErrorB", "SetErrorA", "SetErrorB")
+memory_errors <- cbind(memory_errors, learned_task, error)
+
+
+```
+
+```{r task memory errors, echo=FALSE, warning=FALSE, fig.show='hold', out.width="49%"}
+
+# plotting errors for each sub, and each learned task they made an error on
+x_axis_lab <- 'error type'
+y_axis_lab <- 'proportion of total errors'
+these_cols <- wes_palette("AsteroidCity3")[c(1, 4)]
+jitter_pos <- position_jitterdodge(jitter.width = 0.01) 
+
+plot_memory_errors <- ggplot(data = memory_errors, 
+                mapping = aes(x = error, y = proportion_errors, colour = error, fill = error)) +
+  geom_point(aes(group = sub),
+             alpha = 0.3, 
+             size = 1.5,
+             position = jitter_pos) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 2, 
+               colour = "grey20", fill = "grey20") +
+  stat_summary(fun = mean, geom = "line", 
+               aes(group = 1), 
+               colour = 'grey20', 
+               linewidth = 0.5)+
+  labs(x = x_axis_lab, y = y_axis_lab) +
+  theme_classic(base_size = 16) +
+  scale_fill_manual(values = these_cols) +
+  scale_colour_manual(values = these_cols) +
+  facet_wrap(~ train_type) +
+  theme(
+    legend.position = "none",
+    strip.background = element_rect(fill = "#f0e6da", colour = "NA"),
+    strip.text = element_text(face = "bold", size = 9),
+    axis.line.x = element_line(color = "grey20", linewidth = 0.5),
+    axis.line.y = element_line(color = "grey20", linewidth = 0.5),
+    axis.ticks = element_line(color = "grey20", linewidth = 0.5),
+    axis.text = element_text(color = "grey20", size = 9),
+    axis.title = element_text(face = "bold", color = "grey20", size = 10),
+    axis.title.x = element_text(margin = margin(t = 10)),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.title.y = element_text(margin = margin(r = 10)) 
+  )
+
+print(plot_memory_errors)
+
+```
+
+Is there an interaction between error type and train type on task memory?
+
+```{r task memory errors anova, echo=FALSE, warning=FALSE}
+
+# means for each condition
+memory_errors_summ <- memory_errors %>% 
+  filter(!is.na(proportion_errors)) %>% 
+  group_by(train_type, error) %>% 
+  summarise(n = n(),
+            error_proportion = mean(proportion_errors)) 
+
+# fit the data to an ANOVA model
+memory_error_anova <- aov_ez('sub',
+                         'proportion_errors', 
+                         memory_errors, 
+                         between = 'train_type',
+                         within = 'error')
+
+print(memory_error_anova)
+
+```
