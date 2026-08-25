@@ -25,11 +25,15 @@ Participants then undergo a transfer test where they are assessed in their abili
 
 
 Data analysis code is split across the following folders:
-src           | script for getting task-jumps and general-errors during training 
-              | and accuracy, setting error during transfer test
-src-learn     | script for getting learning onset using the Maggi(2024) algorithm 
-              | during transfer test
-src-routines  | script for getting entropy (routine variability) scores during 
-              | training
+src                         | script for getting task-jumps and general-errors during training 
+                            | and accuracy, setting error during transfer test
+src-learn                   | script for getting learning onset using the Maggi(2024) algorithm 
+                            | during transfer test
+src-routines                | script for getting entropy (routine variability) scores during 
+                            | training
+src-individual-differences  | script for getting individual difference scores on
+                            | the explicit target memory test, spatial and verbal
+                            | working memory tests and self-report responses to 
+                            | questions about search strategy.
 
 Each folder contains its own README.md
