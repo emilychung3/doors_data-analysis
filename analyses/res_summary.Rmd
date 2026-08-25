@@ -416,6 +416,9 @@ entropy_anova <- aov_ez('sub',
 
 print(entropy_anova)
 
+# using a t-test method to check
+TE_ttest <- t.test(mean_entropy ~ train_type, data = training_entropy)
+
 ```
 
 #### Exploratory Analyses
@@ -611,19 +614,15 @@ Participants who have an average general error greater than 0.25 on *stay* trial
 
 ```{r general errors, echo = FALSE, warning=FALSE, fig.show='hold', out.width="49%"}
 
-training_data$switch <- factor(
-  training_data$switch,
-  levels = c("Switch", "Stay")
-)
-
 iv <- training_data$switch
 x_axis_lab <- 'Trial type'
 dv <- training_data$mean_gen_error
 y_axis_lab <- 'General Errors'
 these_cols <- these_cols <- c("#004aad", "#ffbd59")
 
-gen_errors <- ggplot(data = data, 
-                 mapping = aes(x = iv, y = dv, colour = iv, fill = iv)) +
+gen_errors <- 
+  ggplot(data = training_data, 
+         mapping = aes(x = switch, y = mean_gen_error, colour = switch, fill = switch)) +
     geom_half_violin(side = "r", scale = "width", 
                      width = 0.6,
                      alpha = 0.3, linewidth = 0.3, 
@@ -631,7 +630,7 @@ gen_errors <- ggplot(data = data,
     geom_half_point(side = "l", alpha = 0.5, size = 1.5,
                     width = 0.6,
                     position = position_jitter(width = 0.05)) +
-    geom_boxplot(width = 0.1, alpha = 0.7, linewidth = 0.3, colour = "grey20", 
+    geom_boxplot(width = 0.1, alpha = 0.8, linewidth = 0.3, colour = "grey20", 
                  outlier.shape = NA) +
     scale_y_continuous(limits = c(0, max(dv)), breaks = seq(0, 1, by = 0.1)) +
     scale_fill_manual(values = these_cols) +
@@ -640,23 +639,26 @@ gen_errors <- ggplot(data = data,
     stat_summary(fun = mean, geom = "point", shape = 23, size = 2, 
                 colour = "black", fill = "black") +
     facet_wrap(~train_type) +
-    theme_classic(base_size = 16) +
+    theme_classic(base_size = 13) +
     theme(
       legend.position = "none",
       strip.background = element_rect(colour = NA),
       strip.text = element_text(face = "bold", size = 12),
-      axis.line.x = element_line(color = "grey20", linewidth = 0.5),
-      axis.line.y = element_line(color = "grey20", linewidth = 0.5),
-      axis.ticks = element_line(color = "grey20", linewidth = 0.5),
+      axis.line.x = element_line(color = "grey80", linewidth = 0.4),
+      axis.line.y = element_line(color = "grey80", linewidth = 0.4),
+      axis.ticks = element_line(color = "grey40", linewidth = 0.4),
       axis.text = element_text(color = "grey20", size = 12),
-      axis.title = element_text(face = 'bold', color = "grey20", size = 14),
+      axis.title = element_text(face = 'bold', color = "grey20", size = 12),
       axis.title.x = element_text(margin = margin(t = 10)),
-      axis.title.y = element_text(margin = margin(r = 10)) 
+      axis.title.y = element_text(margin = margin(r = 10)) ,
+      panel.background = element_rect(fill = "white"),
+      plot.background = element_rect(fill = "white", colour = NA),
+      plot.margin = margin(20, 20, 20, 20)
     )
     
 print(gen_errors)   
 
-ggsave(here("res/plots/general_errors.png"), plot = gen_errors, width = 6, height = 4)
+ggsave(here("res/plots/general_errors.png"), plot = gen_errors, width = 6, height = 5)
 
 ```
 
@@ -691,24 +693,27 @@ First, we will check whether the data violates assumptions of homogeneity of var
 # get mean, variance and standard deviations for each condition
 var_summary <- training_data %>% 
   group_by(train_type, switch) %>% 
-  summarise(group_mean_error = mean(mean_gen_error),
-            sd = sd(mean_gen_error),
-            var = var(mean_gen_error))
+  summarise(gen_error = mean(mean_gen_error),
+            var = var(mean_gen_error),
+            sd = sd(mean_gen_error)) %>% 
+  ungroup()
+write.csv(var_summary, here("res/output/gen_error_descriptives.csv"), row.names = FALSE)
 
 var_summary <- var_summary %>% 
-  mutate(upper_limit = (group_mean_error + 2.5*sd))
-
-print(var_summary)
+  mutate(upper_limit = (gen_error + 2.5*sd))
 
 # how many participants are considered outliers?
-training_with_descriptives <- left_join(training_data, var_summary, by = c("train_type", "switch"))
+training_with_descriptives <- left_join(training_data, var_summary, 
+                                        by = c("train_type", "switch"))
 
-outliers_summary <- training_with_descriptives %>% filter(mean_gen_error > upper_limit)
+outliers_summary <- training_with_descriptives %>% 
+  filter(mean_gen_error > upper_limit)
+write.csv(outliers_summary, here("res/output/gen_error_outlier_summary.csv"), row.names = FALSE)
+
 n_outliers_per_cond <- outliers_summary %>% 
   group_by(train_type, switch) %>% 
   summarise(n = n())
 print(n_outliers_per_cond)
-
 outlier_ids_gen_err <- outliers_summary %>% pull(sub) %>% unique()
 
 ```
@@ -1013,29 +1018,32 @@ accuracy <- ggplot(data = data,
                geom = "errorbar", 
                width = 0.05,  
                colour = "grey20") +
-  scale_y_continuous(limits = c(0.4, 1), breaks = seq(0.4, 1, by = 0.1)) +
+  #scale_y_continuous(limits = c(0.4, 1), breaks = seq(0.4, 1, by = 0.1)) +
   labs(x = x_axis_lab, y = y_axis_lab) +
-  theme_classic(base_size = 16) +
+  theme_classic(base_size = 13) +
   scale_fill_manual(values = these_cols) +
   scale_colour_manual(values = these_cols) +
   facet_wrap(~train_type) +
   theme(
     legend.position = "none",
-    strip.background = element_rect(colour = "NA"),
-    strip.text = element_text(face = "bold", size = 12),
-    axis.line.x = element_line(color = "grey20", linewidth = 0.5),
-    axis.line.y = element_line(color = "grey20", linewidth = 0.5),
-    axis.ticks = element_line(color = "grey20", linewidth = 0.5),
-    axis.text = element_text(color = "grey20", size = 12),
-    axis.title = element_text(face = "bold", color = "grey20", size = 14),
-    axis.title.x = element_text(margin = margin(t = 10)),
-    axis.title.y = element_text(margin = margin(r = 10)) 
+      strip.background = element_rect(colour = NA),
+      strip.text = element_text(face = "bold", size = 12),
+      axis.line.x = element_line(color = "grey80", linewidth = 0.4),
+      axis.line.y = element_line(color = "grey80", linewidth = 0.4),
+      axis.ticks = element_line(color = "grey40", linewidth = 0.4),
+      axis.text = element_text(color = "grey20", size = 12),
+      axis.title = element_text(face = 'bold', color = "grey20", size = 12),
+      axis.title.x = element_text(margin = margin(t = 10)),
+      axis.title.y = element_text(margin = margin(r = 10)) ,
+      panel.background = element_rect(fill = "white"),
+      plot.background = element_rect(fill = "white", colour = NA),
+      plot.margin = margin(20, 20, 20, 20) 
   )
 
 print(accuracy) 
 
 ggsave(here("res/plots/accuracy_full.png"), plot = accuracy, 
-       width = 6, height = 4)
+       width = 6, height = 5)
 
 ```
 
@@ -1045,8 +1053,8 @@ ggsave(here("res/plots/accuracy_full.png"), plot = accuracy,
 var_summary <- all_transfer_data %>% 
   group_by(train_type, transfer) %>% 
   summarise(mean = mean(mean_acc),
+            var = var(mean_acc),
             sd = sd(mean_acc))
-
 print(var_summary)
 
 transfer_cond_desc <-  all_transfer_data %>% 
@@ -1412,21 +1420,24 @@ learning_onset <- ggplot(data = data,
   facet_wrap(~train_type) +
   theme(
     legend.position = "none",
-    strip.background = element_rect(colour = "NA"),
+    strip.background = element_rect(colour = NA),
     strip.text = element_text(face = "bold", size = 12),
-    axis.line.x = element_line(color = "grey20", linewidth = 0.5),
-    axis.line.y = element_line(color = "grey20", linewidth = 0.5),
-    axis.ticks = element_line(color = "grey20", linewidth = 0.5),
+    axis.line.x = element_line(color = "grey80", linewidth = 0.4),
+    axis.line.y = element_line(color = "grey80", linewidth = 0.4),
+    axis.ticks = element_line(color = "grey40", linewidth = 0.4),
     axis.text = element_text(color = "grey20", size = 12),
-    axis.title = element_text(face = "bold", color = "grey20", size = 14),
+    axis.title = element_text(face = 'bold', color = "grey20", size = 12),
     axis.title.x = element_text(margin = margin(t = 10)),
-    axis.title.y = element_text(margin = margin(r = 10)) 
+    axis.title.y = element_text(margin = margin(r = 10)) ,
+    panel.background = element_rect(fill = "white"),
+    plot.background = element_rect(fill = "white", colour = NA),
+    plot.margin = margin(20, 20, 20, 20)
   )
 
 print(learning_onset)
 
 ggsave(here("res/plots/learn_onset.png"), plot = learning_onset, 
-       width = 6, height = 4)
+       width = 6, height = 5)
 
 ```
 
@@ -1977,8 +1988,12 @@ y_axis_lab <- 'Proportion Correct'
 these_cols <- c("#004aad", "#00bf63", "#ff66c4", "#ff914d")
 
 
-plot_memory_by_trf <- ggplot(data = task_memory_by_trf, 
-                mapping = aes(x = transferred_to, y = proportion_correct, colour = transferred_to, fill = transferred_to)) +
+plot_memory_by_trf <- 
+  ggplot(data = task_memory_by_trf, 
+                mapping = aes(x = transferred_to, 
+                              y = proportion_correct, 
+                              colour = transferred_to, 
+                              fill = transferred_to)) +
   geom_point(aes(group = sub),
              alpha = 0.3, 
              size = 1.5,
@@ -1990,30 +2005,33 @@ plot_memory_by_trf <- ggplot(data = task_memory_by_trf,
                colour = 'black', 
                linewidth = 0.4)+
   scale_y_continuous(breaks = seq(0, 1, by = 0.5)) +
-  labs(x = x_axis_lab, y = y_axis_lab) +
-  theme_classic(base_size = 16) +
+  labs(x = x_axis_lab, 
+       y = y_axis_lab) +
+  theme_classic(base_size = 13) +
   scale_fill_manual(values = these_cols) +
   scale_colour_manual(values = these_cols) +
   facet_wrap(~ train_type) +
   theme(
-    legend.position = "none",
-    strip.background = element_rect(colour = "NA"),
-    strip.text = element_text(margin = margin(b = 10),
-                              face = "bold", 
-                              size = 11),
-    axis.line.x = element_line(color = "grey20", linewidth = 0.5),
-    axis.line.y = element_line(color = "grey20", linewidth = 0.5),
-    axis.ticks = element_line(color = "grey20", linewidth = 0.5),
-    axis.text = element_text(color = "grey20", size = 10),
-    axis.title = element_text(face = "bold", color = "grey20", size = 13),
-    axis.title.x = element_blank(),
-    axis.text.x = element_text(angle = 30, hjust = 1),
-    axis.title.y = element_text(margin = margin(r = 10)) 
+      legend.position = "none",
+      strip.background = element_rect(colour = NA),
+      strip.text = element_text(face = "bold", size = 12),
+      axis.line.x = element_line(color = "grey80", linewidth = 0.4),
+      axis.line.y = element_line(color = "grey80", linewidth = 0.4),
+      axis.ticks = element_line(color = "grey40", linewidth = 0.4),
+      axis.text.x = element_blank(),
+      axis.text.y = element_text(color = "grey20", size = 12),
+      axis.text = element_text(color = "grey20", size = 12),
+      axis.title = element_text(face = 'bold', color = "grey20", size = 12),
+      axis.title.x = element_blank(),
+      axis.title.y = element_text(margin = margin(r = 10)) ,
+      panel.background = element_rect(fill = "white"),
+      plot.background = element_rect(fill = "white", colour = NA),
+      plot.margin = margin(20, 20, 20, 20) 
   )
 
 print(plot_memory_by_trf)
 
-ggsave(here("res/plots/task_memory_by_trf.png"), plot = plot_memory_by_trf, width = 6, height = 4)
+ggsave(here("res/plots/task_memory_by_trf.png"), plot = plot_memory_by_trf, width = 6, height = 5)
 
 ```
 
@@ -2065,8 +2083,12 @@ x_axis_lab <- 'Learned Locations by Transfer Condition'
 y_axis_lab <- 'Proportion Correct'
 these_cols <- c("#004aad", "#00bf63", "#ff66c4", "#ff914d")
 
-plot_transfer_order <- ggplot(data = task_memory_by_trf, 
-                mapping = aes(x = transferred_to, y = proportion_correct, colour = transferred_to, fill = transferred_to)) +
+plot_transfer_order <- 
+  ggplot(data = task_memory_by_trf, 
+        mapping = aes(x = transferred_to, 
+                      y = proportion_correct, 
+                      colour = transferred_to, 
+                      fill = transferred_to)) +
   geom_point(aes(group = sub),
              alpha = 0.3, 
              size = 1.5,
@@ -2078,30 +2100,37 @@ plot_transfer_order <- ggplot(data = task_memory_by_trf,
                colour = 'black', 
                linewidth = 0.3)+
   scale_y_continuous(breaks = seq(0, 1, by = 0.5)) +
-  labs(x = x_axis_lab, y = y_axis_lab) +
-  theme_classic(base_size = 16) +
+  labs(x = x_axis_lab, 
+       y = y_axis_lab, 
+       fill ="Conditions transferred to", 
+       colour = "Conditions transferred to") +
+  theme_classic(base_size = 13) +
   scale_fill_manual(values = these_cols) +
   scale_colour_manual(values = these_cols) +
   facet_wrap(~ comp_vs_part_order) +
   theme(
-    legend.position = "none",
-    strip.background = element_rect(colour = "NA"),
-    strip.text = element_text(margin = margin(b = 10),
-                              face = "bold", 
-                              size = 11),
-    axis.line.x = element_line(color = "grey20", linewidth = 0.5),
-    axis.line.y = element_line(color = "grey20", linewidth = 0.5),
-    axis.ticks = element_line(color = "grey20", linewidth = 0.5),
-    axis.text = element_text(color = "grey20", size = 10),
-    axis.title = element_text(face = "bold", color = "grey20", size = 13),
-    axis.title.x = element_blank(),
-    axis.text.x = element_text(angle = 30, hjust = 1),
-    axis.title.y = element_text(margin = margin(r = 10)) 
+      strip.background = element_rect(colour = NA),
+      strip.text = element_text(face = "bold", size = 12),
+      axis.line.x = element_line(color = "grey80", linewidth = 0.4),
+      axis.line.y = element_line(color = "grey80", linewidth = 0.4),
+      axis.ticks = element_line(color = "grey40", linewidth = 0.4),
+      axis.text.x = element_blank(),
+      axis.text.y = element_text(color = "grey20", size = 12),
+      axis.text = element_text(color = "grey20", size = 12),
+      axis.title = element_text(face = 'bold', color = "grey20", size = 12),
+      axis.title.x = element_blank(),
+      axis.title.y = element_text(margin = margin(r = 10)) ,
+      panel.background = element_rect(fill = "white"),
+      plot.background = element_rect(fill = "white", colour = NA),
+      plot.margin = margin(20, 20, 20, 20) 
   )
 
 print(plot_transfer_order)
 
-ggsave(here("res/plots/task_memory_by_trf_order.png"), plot = plot_transfer_order, width = 6, height = 4)
+ggsave(here("res/plots/task_memory_by_trf_order.png"), 
+       plot = plot_transfer_order, 
+       width = 8, 
+       height = 5)
 
 ```
 
